@@ -1,5 +1,5 @@
 ---
-title: "Collaterals_1000plus_KV"
+title: "1000plus collateral flow & perfusion project (Kersten Villringer)"
 author: "Ahmed Khalil"
 date: "21 May 2018"
 output: html_document
@@ -7,18 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300}
 # necessary packages
 library(robustbase)
 library(knitr)
+library(xtable)
 
 # load data
 allpts <- read.table("Carmela_Project.csv", header = T, sep=",")
@@ -32,6 +25,11 @@ allpts$reperf <- factor(allpts$reperf)
 allpts$Rekan[allpts$Rekan==0] <- "None" # no recanalization
 allpts$Rekan[allpts$Rekan==1] <- "Full" # full recanalization
 allpts$Rekan[allpts$Rekan==2] <- "Partial" # partial recanalization
+```
+
+
+### (1. & 2.)How many patients with reperfusion are recanalizers or non-recanalizers and is there a difference in reperfusion status between the groups?
+```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
 
 # descriptive stats
 kable(table(allpts$reperf, allpts$Rekan))
@@ -39,19 +37,22 @@ barplot(table(allpts$reperf, allpts$Rekan), legend.text = c("No reperfusion", "R
 
 ## TEST FOR DIFFERENCES B/W CATEGORICAL VARIABLES HERE ##
 
+
+```
+
+
+### Performing ANCOVA (! Assumptions)
+```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
 # check assumptions of ANCOVA
 par(mfrow=c(2,2))
-plot(lm(allpts$relTmax_change~allpts$Rekan + allpts$rel_DWIgrowth + allpts$circulation + allpts$TSI + allpts$NIHSS_ad))
+plot(lm(allpts$relTmax_change~allpts$Rekan + allpts$TSI + allpts$iv_tPR))
 
 # perform ANCOVA
-summary(lm(allpts$relTmax_change~allpts$Rekan + allpts$rel_DWIgrowth + allpts$circulation + allpts$TSI + allpts$NIHSS_ad))
+summary(lm(allpts$relTmax_change~allpts$Rekan + allpts$TSI + allpts$iv_tPR))
+```
 
-# check assumptions of robust GLM
-par(mfrow=c(2,3))
-plot(lmrob(allpts$relTmax_change~allpts$Rekan + allpts$rel_DWIgrowth + allpts$circulation + allpts$TSI + allpts$NIHSS_ad + allpts$iv_tPR))
-
-# perform robust GLM
-summary(lmrob(allpts$relTmax_change~allpts$Rekan + allpts$rel_DWIgrowth + allpts$circulation + allpts$TSI + allpts$NIHSS_ad + allpts$iv_tPR))
+### (3.) Is there a difference in perfusion changes between patients with anterior and posterior circulation strokes?
+```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
 
 # test if circulation has influence on reperfusion in non-recanalizers
 summary(lmrob(allpts[allpts$Rekan=="None",]$relTmax_change~allpts[allpts$Rekan=="None",]$circulation))
@@ -60,8 +61,27 @@ summary(lmrob(allpts[allpts$Rekan=="None",]$relTmax_change~allpts[allpts$Rekan==
 summary(lmrob(allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$relTmax_change~allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$circulation))
 ```
 
+### (4.) Is there an influence of rTPA, TOO, recanalization on perfusion changes?
+```{r, echo= FALSE, fig.width=6, fig.height=9, fig.align='center',dpi=300, warning=F}
+# check assumptions of robust GLM
+par(mfrow=c(3,2))
+plot(lmrob(allpts$relTmax_change~allpts$Rekan + allpts$circulation + allpts$TSI + allpts$iv_tPR))
 
+# perform robust GLM
+summary(lmrob(allpts$relTmax_change~allpts$Rekan + allpts$circulation + allpts$TSI + allpts$iv_tPR))
 
-```{r pressure, echo=FALSE}
 ```
 
+### (5.) Is there a difference in clinical outcome (mRS day90) in reperfused vs non-reperfused recanalizers and non-recanalizers?
+```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F}
+# perform robust GLM
+summary(lmrob(allpts$mRS_d90~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR +allpts$TSI))
+boxplot(mRS_d90~Rekan + reperf, data=allpts, col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"))
+legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
+```
+
+### (6.) Is there a difference in imaging outcome (infarct growth) in reperfused vs non-reperfused recanalizers and non-recanalizers?
+```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F}
+# perform robust GLM
+summary(lmrob(allpts$rel_DWIgrowth~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR +allpts$TSI))
+```
