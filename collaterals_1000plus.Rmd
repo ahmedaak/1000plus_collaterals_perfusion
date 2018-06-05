@@ -43,7 +43,7 @@ vols_all_pts$HIR1 <- vols_all_pts$Day1_.8_volume/vols_all_pts$Day1_.2_volume
 vols_all_pts$HIR2 <- vols_all_pts$Day2_.8_volume/vols_all_pts$Day2_.2_volume
 
 # merge volumes and HIR with the rest of the data
-allpts_test <- merge(allpts, vols_all_pts, by = "ID")
+allpts <- merge(allpts, vols_all_pts, by = "ID")
 
 # create necessary variables (reperfusion / infarct growth binarized cut-offs)
 allpts$reperf[allpts$relTmax_change<=-50] <- "Yes"
