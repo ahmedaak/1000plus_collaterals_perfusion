@@ -1,8 +1,10 @@
 ---
 title: "1000plus collateral flow & perfusion project (Kersten Villringer)"
 author: "Ahmed Khalil"
-date:  "`r format(Sys.time(), '%d %B, %Y')`"
-output: html_document
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -16,9 +18,11 @@ library(Hmisc)
 library(TOSTER)
 library(stargazer)
 library(summarytools)
+library(magrittr)
+library(kableExtra)
 
 # load data
-allpts <- read.table("Carmela_Project.csv", header = T, sep=",")
+allpts <- read.table("Carmela_Project.csv", header = T, sep=";")
 colnames(allpts)[1] <- "ID"
 
 # load volumetric data
@@ -73,6 +77,7 @@ allpts$Rekan[allpts$Rekan==0] <- "None" # no recanalization
 allpts$Rekan[allpts$Rekan==1] <- "Full" # full recanalization
 allpts$Rekan[allpts$Rekan==2] <- "Partial" # partial recanalization
 allpts$Rekan <- factor(allpts$Rekan)
+allpts$Rekan <- factor(allpts$Rekan,levels(allpts$Rekan)[c(2,3,1)])
 
 # recode other categorical variables
 allpts$sex[allpts$sex==1] <- "Male"
@@ -94,116 +99,193 @@ allpts$no_recan_1 <- c()
 allpts$VAR00002 <- c()
 allpts$TSI_dich <- c()
 
+# correctly code NaNs
+allpts[allpts=="NaN"]<-NA
 
+# Defines whether (T) or not (F) to show outliers in boxplots
+OL = F
 ```
+### General remarks on methods:
+**Reperfusion** is defined as a relative Tmax >4s change of >-50%.  
+The Tmax >4s change itself is referred to as **extent of reperfusion**.     
+Binarized **infarct growth** is defined as absolute DWI lesion growth >7mL.  
+Surrogates for good collateral flow in this study are:  
+  * Presence of reperfusion in non-recanalizers  
+  * The hypoperfusion intensity ration (HIR) at baseline (lower is better), defined according to:  
+*Bang, O. Y. et al. (2008) ‘Determinants of the distribution and severity of hypoperfusion in patients with ischemic stroke.’, Neurology, 71(22), pp. 1804–11. doi: 10.1212/01.wnl.0000335929.06390.d3.*  
 
-### Descriptive statistics
+The analyses in points 3,4,6,7 are performed using a robust GLM ("High Breakdown And High Efficiency Robust Linear Regression") using the R function "lmrob" from the "robustbase" package.  
+Citation of package:  
+*Martin Maechler, Peter Rousseeuw, Christophe Croux, Valentin Todorov, Andreas Ruckstuhl, Matias Salibian-Barrera, Tobias Verbeke, Manuel Koller, Eduardo L. T. Conceicao  and Maria Anna di Palma (2018). robustbase: Basic Robust Statistics R package version 0.93-0. URL http://CRAN.R-project.org/package=robustbase *   
+Citation of robust GLM:  
+*Yohai, V. J. (1987). High breakdown-point and high efficiency robust estimates for regression. The Annals of Statistics, 642-656.*
+
+For visualization (not analysis) purposes, outliers are **not** shown on the boxplots. 
+
+### 1. Descriptive statistics
 ```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
 # descriptive stats
-#html(describe(allpts[,-1]))
-dfSummary(allpts[,-1], plain.ascii = F, style="grid", graph.col = F)
+dfSummary(allpts[,c(3,4,13,15)], plain.ascii = F, style="grid", graph.col = F, varnumbers = F, valid.col=F)
+allpts_cont <- allpts[,c(2,5,6:12,16:18,25,29,30)] # define continous variables
+stargazer(allpts_cont, type="html", median = T, iqr = T, digits = 1)
 ```
+<style>
 
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  min-width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
 
-### (1.) How many patients with reperfusion are recanalizers or non-recanalizers and (2.) is there a difference in reperfusion status between the groups?
+</style>
+
+### 2. What is the association between reperfusion and recanalization?
 ```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
+
+# plot recanalization according to reperfusion status
+barplot(table(allpts$reperf, allpts$Rekan), legend.text = c("No reperfusion", "Reperfusion"), col=c("#1b9e77","#d95f02"), xlab="Recanalization", ylab="Number of patients", xpd=F,args.legend = list(x = "topleft"), ylim=c(0,80))
+
 # cross-tabulation of recanalization/reperfusion
-kable(table(allpts$reperf, allpts$Rekan))
-barplot(table(allpts$reperf, allpts$Rekan), legend.text = c("No reperfusion", "Reperfusion"), col=c("#1b9e77","#d95f02"), xlab="Recanalization", ylab="% of patients", xpd=F,args.legend = list(x = "topleft"), ylim=c(0,80))
+kable(table(allpts$reperf, allpts$Rekan)) %>%
+  kable_styling(full_width=F, position="center") %>%
+  add_header_above(c(" "=1, "Recanalization"=3)) %>%
+  group_rows("Reperfusion",1,2)
 
 # test for differences between recanalization and reperfusion
 print(chisq.test(table(allpts$reperf, allpts$Rekan)))
 
 ```
-There is a statistically significant difference in reperfusion between the recanalization groups (i.e. reperfusion is dependent on recanalization grade).
+There is a statistically significant difference in the prevalence of reperfusion between the recanalization groups (i.e. reperfusion is associated with recanalization grade).
 
-### (3.) Is there a difference in perfusion changes between patients with anterior and posterior circulation strokes?
+### 3. Is there a difference in the extent of reperfusion between patients with anterior and posterior circulation strokes?
+Models (1) & (2) - in non-recanalizers  
+Models (3) & (4) - in recanalizers  
+Models (2) & (4) - adjusted for IV tPA  
+Models (1) & (3) - not adjusted for IV tPA  
+
+**Note: the second iteration of "iv_tPRYes" in the table below refers to the interaction between circulation + IV tPA**  
+
 ```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
+boxplot(relTmax_4_change~circulation, data=allpts, xlab="Circulation", ylab="Extent of reperfusion (%)", outline=OL)
 
 # test if circulation has influence on reperfusion in non-recanalizers
 model_1 <- lmrob(allpts[allpts$Rekan=="None",]$relTmax_4_change~allpts[allpts$Rekan=="None",]$circulation)
-# test if circulation has influence on reperfusion in non-recanalizers ADNJUSTING FOR iv TPA
+# test if circulation has influence on reperfusion in non-recanalizers ADJUSTING FOR iv TPA
 model_2 <- lmrob(allpts[allpts$Rekan=="None",]$relTmax_4_change~allpts[allpts$Rekan=="None",]$circulation*allpts[allpts$Rekan=="None",]$iv_tPR)
 # test if circulation has influence on reperfusion in recanalizers (full OR partial)
 model_3 <- lmrob(allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$relTmax_4_change~allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$circulation)
+# test if circulation has influence on reperfusion in recanalizers (full OR partial) ADJUSTING FOR iv TPA
+model_4 <- lmrob(allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$relTmax_4_change~allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$circulation*allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$iv_tPR)
 
-stargazer(model_1, model_2, model_3, type="html", align = F, style="all", single.row=T)
+stargazer(model_1, model_2, model_3,model_4, type="html", align = F, style="all", single.row=T)
 
 
 ```
 
-### (4.) Is there an influence of rTPA, TOO, recanalization on perfusion changes?
+### 4. What factors influence the extent of reperfusion?
 ```{r, echo= FALSE, fig.width=6, fig.height=9, fig.align='center',dpi=300, warning=F, results="asis"}
 # check assumptions of robust GLM
-par(mfrow=c(3,2))
-plot(lmrob(allpts$relTmax_4_change~allpts$Rekan + allpts$circulation + allpts$TSI + allpts$iv_tPR))
+#par(mfrow=c(3,2))
+#plot(lmrob(allpts$relTmax_4_change~allpts$Rekan + allpts$circulation + allpts$TSI + allpts$iv_tPR))
 
 # perform robust GLM
-model_4 <- lmrob(allpts$relTmax_4_change~allpts$Rekan + allpts$circulation + allpts$TSI + allpts$iv_tPR)
+model_5 <- lmrob(allpts$relTmax_4_change~allpts$Rekan + allpts$iv_tPR + allpts$TSI + allpts$HIR1)
 
+# plot extent of reperfusion in different recanalization grades
 par(mfrow=c(1,1))
-boxplot(relTmax_4_change~Rekan, data=allpts, col=c("#1b9e77","#1b9e77"), ylab="Relative Tmax change")
-
-stargazer(model_4, type="html", align = F, style="all", single.row=T)
-```
-
-### (5.) Is there a difference in clinical outcome (mRS day90) in reperfused vs non-reperfused recanalizers and non-recanalizers?
-```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
-# perform robust GLM
-model_5 <- lmrob(allpts$mRS_d90~allpts$Rekan*allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$mismatch_vol + allpts$HIR1)
+boxplot(relTmax_4_change~Rekan, data=allpts, col=c("#1b9e77","#1b9e77"), ylab="Extent of reperfusion (%)", xlab="Recanalization", outline=OL)
 
 stargazer(model_5, type="html", align = F, style="all", single.row=T)
-
-boxplot(mRS_d90~Rekan + reperf, data=allpts, col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="mRS day 90")
-legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 ```
 
-### (6.) Is there a difference in imaging outcome (infarct growth) in reperfused vs non-reperfused recanalizers and non-recanalizers?
+### 5. Is collateral flow at baseline (HIR) associated with DWI lesion volume and NIHSS at baseline and DWI lesion growth?
+```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
+plot(allpts$HIR1, allpts$DWIvol_d1, xlab="Hypoperfusion intensity ratio", ylab="DWI lesion volume on day 1 (mL)",col = alpha("black", 0.4), pch=16)
+print(cor.test(allpts$HIR1, allpts$DWIvol_d1, method="spearman"))
+
+plot(allpts$HIR1, allpts$NIHSS_ad, xlab="Hypoperfusion intensity ratio", ylab="NIHSS on admission",col = alpha("black", 0.4), pch=16)
+print(cor.test(allpts$HIR1, allpts$NIHSS_ad, method="spearman"))
+
+plot(allpts$HIR1, allpts$DWIgrowth, xlab="Hypoperfusion intensity ratio", ylab="Absolute DWI lesion growth (mL)",col = alpha("black", 0.4), pch=16)
+print(cor.test(allpts$HIR1, allpts$DWIgrowth, method="spearman"))
+
+plot(allpts$HIR1, allpts$rel_DWIgrowth, xlab="Hypoperfusion intensity ratio", ylab="Relative DWI lesion growth (%)",col = alpha("black", 0.4), pch=16)
+print(cor.test(allpts$HIR1, allpts$rel_DWIgrowth, method="spearman"))
+
+```
+
+### 6. What factors influence clinical outcome (mRS day90)?
 ```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
 # perform robust GLM
-model_6 <- lmrob(allpts$rel_DWIgrowth~allpts$Rekan*allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$mismatch_vol + allpts$HIR1)
+model_6 <- lmrob(allpts$mRS_d90~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$HIR1)
+
+boxplot(mRS_d90~Rekan + reperf, data=allpts, col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="mRS day 90", outline=OL, xaxt="n")
+axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
+legend("topright", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 
 stargazer(model_6, type="html", align = F, style="all", single.row=T)
+```
 
-boxplot(rel_DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Relative DWI growth", ylim=c(-100,300))
+### 7. What factors influence infarct growth?
+```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
+# perform robust GLM
+model_7 <- lmrob(allpts$rel_DWIgrowth~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$HIR1)
+
+boxplot(rel_DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Relative DWI growth", outline=OL, xaxt="n")
+axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
 legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
-
-model_7 <- lmrob(allpts$DWIgrowth~allpts$Rekan*allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$mismatch_vol + allpts$HIR1)
 
 stargazer(model_7, type="html", align = F, style="all", single.row=T)
 
-boxplot(DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", ylim=c(0,100))
+model_8 <- lmrob(allpts$DWIgrowth~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$HIR1)
+
+boxplot(DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", outline=OL, xaxt="n")
+axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
 legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
+
+stargazer(model_8, type="html", align = F, style="all", single.row=T)
 
 ```
 
-### Is reperfusion associated with less infarct growth in non-recanalizers?
-```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F}
+### 8. Is reperfusion associated with infarct growth?
+```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
 # choose non-recanalizers
 nonrecan <- allpts[allpts$Rekan=="None",]
-# choose non-recanalizers with reperfusion
-nonrecan_reperf <- nonrecan[nonrecan$reperf=="Yes",]
-# choose non-recanalizers with no reperfusion
-nonrecan_noreperf <- nonrecan[nonrecan$reperf=="No",]
-
-# boxplot of DWI growth in reperfusers vs non-reperfusers
-boxplot(nonrecan_noreperf$DWIgrowth, nonrecan_reperf$DWIgrowth, ylab = "Absolute DWI growth (mL)")
-wilcox.test(nonrecan_noreperf$DWIgrowth, nonrecan_reperf$DWIgrowth)
-TOSTtwo(m1 = mean(nonrecan_noreperf$DWIgrowth), m2 = mean(nonrecan_reperf$DWIgrowth), sd(nonrecan_noreperf$DWIgrowth), sd(nonrecan_reperf$DWIgrowth), n1 = length(nonrecan_noreperf$DWIgrowth), n2 = length(nonrecan_reperf$DWIgrowth), low_eqbound_d = -0.6, high_eqbound_d = 0.6)
-
-boxplot(nonrecan_noreperf$rel_DWIgrowth, nonrecan_reperf$rel_DWIgrowth, ylab = "Relative DWI growth (%)")
-wilcox.test(nonrecan_noreperf$rel_DWIgrowth, nonrecan_reperf$rel_DWIgrowth)
-TOSTtwo(m1 = mean(nonrecan_noreperf$rel_DWIgrowth), m2 = mean(nonrecan_reperf$rel_DWIgrowth), sd(nonrecan_noreperf$rel_DWIgrowth), sd(nonrecan_reperf$rel_DWIgrowth), n1 = length(nonrecan_noreperf$rel_DWIgrowth), n2 = length(nonrecan_reperf$rel_DWIgrowth), low_eqbound_d = -0.6, high_eqbound_d = 0.6)
-
-
-# crosstab of reperfusion vs infarct growth
-kable(table(nonrecan$reperf, nonrecan$infarct_growth))
-
+nonrecan_data <- data.frame(nonrecan$infarct_growth, nonrecan$reperf)
 
 # barplot of reperfusion vs infarct growth
-barplot(table(nonrecan$reperf, nonrecan$infarct_growth),legend.text = c("No infarct growth", "Infarct growth"), col=c("#1b9e77","#d95f02"), xlab="Reperfusion", ylab="Number of patients", xpd=F,args.legend = list(x = "topright"), ylim=c(0,40))
+barplot(table(nonrecan_data),legend.text = c("No infarct growth", "Infarct growth"), col=c("#1b9e77","#d95f02"), xlab="Reperfusion", ylab="Number of patients", xpd=F,args.legend = list(x = "topright"), main="Non-recanalizers")
+
+# crosstab of reperfusion vs infarct growth
+kable(table(nonrecan_data)) %>%
+  kable_styling(full_width=F, position="center") %>%
+  add_header_above(c(" "=1, "Reperfusion"=2)) %>%
+  group_rows("Infarct growth",1,2)
 
 # test for differences between reperfusion and infarct growth
-print(chisq.test(table(allpts$reperf, allpts$infarct_growth)))
+print(chisq.test(table(nonrecan$reperf, nonrecan$infarct_growth)))
+
+#################################
+
+# choose recanalizers
+recan <- allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]
+recan_data <- data.frame(recan$infarct_growth, recan$reperf)
+
+# barplot of reperfusion vs infarct growth
+barplot(table(recan_data),legend.text = c("No infarct growth", "Infarct growth"), col=c("#1b9e77","#d95f02"), xlab="Reperfusion", ylab="Number of patients", xpd=F,args.legend = list(x = "topleft"), main="Recanalizers")
+
+# crosstab of reperfusion vs infarct growth
+kable(table(recan_data)) %>%
+  kable_styling(full_width=F, position="center") %>%
+  add_header_above(c(" "=1, "Reperfusion"=2)) %>%
+  group_rows("Infarct growth",1,2)
+
+# test for differences between reperfusion and infarct growth
+print(chisq.test(table(recan$reperf, recan$infarct_growth)))
 
 ```
