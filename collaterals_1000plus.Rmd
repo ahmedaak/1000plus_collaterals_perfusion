@@ -20,6 +20,8 @@ library(stargazer)
 library(summarytools)
 library(magrittr)
 library(kableExtra)
+library(effects)
+library(pwr)
 
 # load data
 allpts <- read.table("Carmela_Project.csv", header = T, sep=";")
@@ -99,6 +101,11 @@ allpts$no_recan_1 <- c()
 allpts$VAR00002 <- c()
 allpts$TSI_dich <- c()
 
+# merge with variables defining occlusion location
+occ_classfn <- read.table("occlusion_classfn.csv", header = T, sep=";")
+allpts <- merge(allpts, occ_classfn, by = "ID")
+
+
 # correctly code NaNs
 allpts[allpts=="NaN"]<-NA
 
@@ -121,6 +128,16 @@ Citation of robust GLM:
 *Yohai, V. J. (1987). High breakdown-point and high efficiency robust estimates for regression. The Annals of Statistics, 642-656.*
 
 For visualization (not analysis) purposes, outliers are **not** shown on the boxplots. 
+
+**Power analysis:**
+`r pwrtest <- pwr.f2.test(u= 11, f2=0.1, sig.level = 0.05, power=0.8)`
+
+Sample size needed to detect minimum R<sup>2</sup>  of `r pwrtest$f2` at significance level of `r pwrtest$sig.level` and power of `r pwrtest$power` with `r pwrtest$u` predictors (including interactions) = `r pwrtest$v`. Performed with the R package "pwr".  
+Citation of package:  
+*Stephane Champely (2018). pwr: Basic Functions for Power Analysis. R package version 1.2-2. https://CRAN.R-project.org/package=pwr *
+  
+  
+
 
 ### 1. Descriptive statistics
 ```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
@@ -171,7 +188,6 @@ Models (1) & (3) - not adjusted for IV tPA
 **Note: the second iteration of "iv_tPRYes" in the table below refers to the interaction between circulation + IV tPA**  
 
 ```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
-boxplot(relTmax_4_change~circulation, data=allpts, xlab="Circulation", ylab="Extent of reperfusion (%)", outline=OL)
 
 # test if circulation has influence on reperfusion in non-recanalizers
 model_1 <- lmrob(allpts[allpts$Rekan=="None",]$relTmax_4_change~allpts[allpts$Rekan=="None",]$circulation)
@@ -183,6 +199,8 @@ model_3 <- lmrob(allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$relTmax_4
 model_4 <- lmrob(allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$relTmax_4_change~allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$circulation*allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]$iv_tPR)
 
 stargazer(model_1, model_2, model_3,model_4, type="html", align = F, style="all", single.row=T)
+
+boxplot(relTmax_4_change~circulation, data=allpts, xlab="Circulation", ylab="Extent of reperfusion (%)", outline=OL)
 
 
 ```
@@ -219,73 +237,43 @@ print(cor.test(allpts$HIR1, allpts$rel_DWIgrowth, method="spearman"))
 
 ```
 
-### 6. What factors influence clinical outcome (mRS day90)?
-```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
+### 6. What factors influence clinical outcome (mRS day90) and infarct growth?
+```{r, echo= FALSE, fig.width=8, fig.height=8, fig.align='center',dpi=300, warning=F, results="asis"}
 # perform robust GLM
-model_6 <- lmrob(allpts$mRS_d90~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$HIR1)
+model_6 <- lmrob(mRS_d90~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1, data = allpts)
 
 boxplot(mRS_d90~Rekan + reperf, data=allpts, col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="mRS day 90", outline=OL, xaxt="n")
 axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
 legend("topright", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 
-stargazer(model_6, type="html", align = F, style="all", single.row=T)
-```
+plot(allEffects(model_6), multiline=T, ci.style="bars")
 
-### 7. What factors influence infarct growth?
-```{r, echo= FALSE, fig.width=8, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
 # perform robust GLM
-model_7 <- lmrob(allpts$rel_DWIgrowth~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$HIR1)
+model_7 <- lmrob(rel_DWIgrowth~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1, data = allpts)
 
 boxplot(rel_DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Relative DWI growth", outline=OL, xaxt="n")
 axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
 legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 
-stargazer(model_7, type="html", align = F, style="all", single.row=T)
 
-model_8 <- lmrob(allpts$DWIgrowth~allpts$Rekan + allpts$reperf + allpts$NIHSS_ad + allpts$iv_tPR + allpts$HIR1)
+plot(allEffects(model_7), multiline=T, ci.style="bars")
+
+model_8 <- lmrob(DWIgrowth~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1, data = allpts)
 
 boxplot(DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", outline=OL, xaxt="n")
 axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
 legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 
-stargazer(model_8, type="html", align = F, style="all", single.row=T)
+
+plot(allEffects(model_8), multiline=T, ci.style="bars")
+
+stargazer(model_6, model_7, model_8, type="html", align = F, style="all", single.row=T)
 
 ```
 
-### 8. Is reperfusion associated with infarct growth?
-```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
-# choose non-recanalizers
-nonrecan <- allpts[allpts$Rekan=="None",]
-nonrecan_data <- data.frame(nonrecan$infarct_growth, nonrecan$reperf)
-
-# barplot of reperfusion vs infarct growth
-barplot(table(nonrecan_data),legend.text = c("No infarct growth", "Infarct growth"), col=c("#1b9e77","#d95f02"), xlab="Reperfusion", ylab="Number of patients", xpd=F,args.legend = list(x = "topright"), main="Non-recanalizers")
-
-# crosstab of reperfusion vs infarct growth
-kable(table(nonrecan_data)) %>%
-  kable_styling(full_width=F, position="center") %>%
-  add_header_above(c(" "=1, "Reperfusion"=2)) %>%
-  group_rows("Infarct growth",1,2)
-
-# test for differences between reperfusion and infarct growth
-print(chisq.test(table(nonrecan$reperf, nonrecan$infarct_growth)))
-
-#################################
-
-# choose recanalizers
-recan <- allpts[allpts$Rekan=="Full"|allpts$Rekan=="Partial",]
-recan_data <- data.frame(recan$infarct_growth, recan$reperf)
-
-# barplot of reperfusion vs infarct growth
-barplot(table(recan_data),legend.text = c("No infarct growth", "Infarct growth"), col=c("#1b9e77","#d95f02"), xlab="Reperfusion", ylab="Number of patients", xpd=F,args.legend = list(x = "topleft"), main="Recanalizers")
-
-# crosstab of reperfusion vs infarct growth
-kable(table(recan_data)) %>%
-  kable_styling(full_width=F, position="center") %>%
-  add_header_above(c(" "=1, "Reperfusion"=2)) %>%
-  group_rows("Infarct growth",1,2)
-
-# test for differences between reperfusion and infarct growth
-print(chisq.test(table(recan$reperf, recan$infarct_growth)))
-
+### 7. Is reperfusion associated with infarct growth?
+```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
+model_9 <- glm(infarct_growth~Rekan*reperf*OCC_LOC_1,family = binomial(link="logit"), data=allpts)
+#plot(allEffects(model_9), multiline=T, ci.style="bars")
+stargazer(model_9, type="html", align = F, style="all", single.row=T)
 ```
