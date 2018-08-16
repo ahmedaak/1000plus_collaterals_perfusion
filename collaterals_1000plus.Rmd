@@ -1,5 +1,5 @@
 ---
-title: "1000plus collateral flow & perfusion project (Kersten Villringer)"
+title: "1000plus collateral flow & perfusion project"
 author: "Ahmed Khalil"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -24,7 +24,7 @@ library(effects)
 library(pwr)
 
 # load data
-allpts <- read.table("Carmela_Project.csv", header = T, sep=";")
+allpts <- read.table("all_data.csv", header = T, sep=";")
 colnames(allpts)[1] <- "ID"
 
 # load volumetric data
@@ -79,7 +79,7 @@ allpts$Rekan[allpts$Rekan==0] <- "None" # no recanalization
 allpts$Rekan[allpts$Rekan==1] <- "Full" # full recanalization
 allpts$Rekan[allpts$Rekan==2] <- "Partial" # partial recanalization
 allpts$Rekan <- factor(allpts$Rekan)
-allpts$Rekan <- factor(allpts$Rekan,levels(allpts$Rekan)[c(2,3,1)])
+allpts$Rekan <- factor(allpts$Rekan,levels(allpts$Rekan)[c(1,3,2)])
 
 # recode other categorical variables
 allpts$sex[allpts$sex==1] <- "Male"
