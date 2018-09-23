@@ -24,7 +24,7 @@ library(effects)
 library(pwr)
 
 # load data
-allpts <- read.table("all_data.csv", header = T, sep=";")
+allpts <- read.table("all_data_v2.csv", header = T, sep=",")
 colnames(allpts)[1] <- "ID"
 
 # load volumetric data
@@ -70,8 +70,8 @@ allpts$reperf[allpts$relTmax_4_change<=-50] <- "Yes"
 allpts$reperf[allpts$relTmax_4_change>-50] <- "No"
 allpts$reperf <- factor(allpts$reperf)
 
-allpts$infarct_growth[allpts$DWIgrowth>=7] <- "Yes"
-allpts$infarct_growth[allpts$DWIgrowth<7] <- "No"
+allpts$infarct_growth[allpts$infarct_growth_D5FLAIR>=7] <- "Yes"
+allpts$infarct_growth[allpts$infarct_growth_D5FLAIR<7] <- "No"
 allpts$infarct_growth <- factor(allpts$infarct_growth)
 
 # recode recanalization variable
@@ -115,7 +115,7 @@ OL = F
 ### General remarks on methods:
 **Reperfusion** is defined as a relative Tmax >4s change of >-50%.  
 The Tmax >4s change itself is referred to as **extent of reperfusion**.     
-Binarized **infarct growth** is defined as absolute DWI lesion growth >7mL.  
+Binarized **infarct growth** is defined as absolute lesion growth (FLAIR D5 - DWI D0) >7mL.  
 Surrogates for good collateral flow in this study are:  
   * Presence of reperfusion in non-recanalizers  
   * The hypoperfusion intensity ration (HIR) at baseline (lower is better), defined according to:  
@@ -144,7 +144,7 @@ Citation of package:
 # descriptive stats
 dfSummary(allpts[,c(3,4,13,15)], plain.ascii = F, style="grid", graph.col = F, varnumbers = F, valid.col=F)
 allpts_cont <- allpts[,c(2,5,6:12,16:18,25,29,30)] # define continous variables
-stargazer(allpts_cont, type="html", median = T, iqr = T, digits = 1)
+#stargazer(allpts_cont, type="html", median = T, iqr = T, digits = 1)
 ```
 <style>
 
@@ -229,8 +229,8 @@ print(cor.test(allpts$HIR1, allpts$DWIvol_d1, method="spearman"))
 plot(allpts$HIR1, allpts$NIHSS_ad, xlab="Hypoperfusion intensity ratio", ylab="NIHSS on admission",col = alpha("black", 0.4), pch=16)
 print(cor.test(allpts$HIR1, allpts$NIHSS_ad, method="spearman"))
 
-plot(allpts$HIR1, allpts$DWIgrowth, xlab="Hypoperfusion intensity ratio", ylab="Absolute DWI lesion growth (mL)",col = alpha("black", 0.4), pch=16)
-print(cor.test(allpts$HIR1, allpts$DWIgrowth, method="spearman"))
+plot(allpts$HIR1, allpts$infarct_growth_D5FLAIR, xlab="Hypoperfusion intensity ratio", ylab="Absolute DWI lesion growth (mL)",col = alpha("black", 0.4), pch=16)
+print(cor.test(allpts$HIR1, allpts$infarct_growth_D5FLAIR, method="spearman"))
 
 plot(allpts$HIR1, allpts$rel_DWIgrowth, xlab="Hypoperfusion intensity ratio", ylab="Relative DWI lesion growth (%)",col = alpha("black", 0.4), pch=16)
 print(cor.test(allpts$HIR1, allpts$rel_DWIgrowth, method="spearman"))
@@ -258,22 +258,31 @@ legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#
 
 plot(allEffects(model_7), multiline=T, ci.style="bars")
 
-model_8 <- lmrob(DWIgrowth~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1, data = allpts)
+model_8 <- lmrob(infarct_growth_D5FLAIR~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1, data = allpts)
 
-boxplot(DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", outline=OL, xaxt="n")
+boxplot(infarct_growth_D5FLAIR~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", outline=OL, xaxt="n")
 axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
 legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 
 
 plot(allEffects(model_8), multiline=T, ci.style="bars")
 
-stargazer(model_6, model_7, model_8, type="html", align = F, style="all", single.row=T)
+model_9 <- lmrob(DWIgrowth~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1, data = allpts)
+
+boxplot(DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", outline=OL, xaxt="n")
+axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
+legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
+
+
+plot(allEffects(model_9), multiline=T, ci.style="bars")
+
+stargazer(model_6, model_7, model_8, model_9, type="html", align = F, style="all", single.row=T)
 
 ```
 
 ### 7. Is reperfusion associated with infarct growth?
 ```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
-model_9 <- glm(infarct_growth~Rekan*reperf*OCC_LOC_1,family = binomial(link="logit"), data=allpts)
+model_10 <- glm(infarct_growth~Rekan*reperf*OCC_LOC_1,family = binomial(link="logit"), data=allpts)
 #plot(allEffects(model_9), multiline=T, ci.style="bars")
-stargazer(model_9, type="html", align = F, style="all", single.row=T)
+stargazer(model_10, type="html", align = F, style="all", single.row=T)
 ```
