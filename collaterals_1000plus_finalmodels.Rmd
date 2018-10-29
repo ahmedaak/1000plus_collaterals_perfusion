@@ -244,82 +244,75 @@ print(cor.test(allpts$HIR1, allpts$rel_DWIgrowth, method="spearman"))
 
 ```
 
-### 6. What factors influence clinical outcome (mRS day90) and infarct growth?
-```{r, echo= FALSE, fig.width=8, fig.height=8, fig.align='center',dpi=300, warning=F, results="asis"}
-# perform robust GLM
-model_6 <- lmrob(mRS_d90~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1 + higashida_D1, data = allpts)
-
-boxplot(mRS_d90~Rekan + reperf, data=allpts, col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="mRS day 90", outline=OL, xaxt="n")
-axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
-legend("topright", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
-
-plot(allEffects(model_6), multiline=T, ci.style="bars")
-
-# perform robust GLM
-model_7 <- lmrob(rel_DWIgrowth~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1 + higashida_D1, data = allpts)
-
-boxplot(rel_DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Relative DWI growth", outline=OL, xaxt="n")
-axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
-legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 
 
-plot(allEffects(model_7), multiline=T, ci.style="bars")
-
-model_8 <- lmrob(infarct_growth_D5FLAIR~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1 + higashida_D1, data = allpts)
-
-boxplot(infarct_growth_D5FLAIR~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", outline=OL, xaxt="n")
-axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
-legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
-
-
-plot(allEffects(model_8), multiline=T, ci.style="bars")
-
-model_9 <- lmrob(DWIgrowth~Rekan*reperf + NIHSS_ad + iv_tPR + HIR1*OCC_LOC_1 + higashida_D1, data = allpts)
-
-boxplot(DWIgrowth~Rekan + reperf, data=allpts,col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="Absolute DWI growth", outline=OL, xaxt="n")
-axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
-legend("topleft", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
-
-
-plot(allEffects(model_9), multiline=T, ci.style="bars")
-
-stargazer(model_6, model_7, model_8, model_9, type="html", align = F, style="all", single.row=T)
-
-```
-
-### 7. Is reperfusion associated with infarct growth?
-```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
-model_10 <- glm(infarct_growth~Rekan*reperf*OCC_LOC_1,family = binomial(link="logit"), data=allpts)
-#plot(allEffects(model_9), multiline=T, ci.style="bars")
-stargazer(model_10, type="html", align = F, style="all", single.row=T)
-```
-
-
-### 8. Model comparisons
+### 6. Model comparisons
 ```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
 model_A <- lmrob(mRS_d90~NIHSS_ad + iv_tPR, data=allpts)
+plot(allEffects(model_A), multiline=T, ci.style="bars")
 
 model_B <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
+plot(allEffects(model_B), multiline=T, ci.style="bars")
 
 model_C <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + HIR1, data=allpts)
+plot(allEffects(model_C), multiline=T, ci.style="bars")
 
 model_D <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
+plot(allEffects(model_D), multiline=T, ci.style="bars")
 
-model_E <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
+#model_E <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
+#plot(allEffects(model_E), multiline=T, ci.style="bars")
 
-stargazer(model_A, model_B, model_C, model_D, model_E, type="html", align = F, style="all", single.row=T)
+stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
 
 model_A <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR, data=allpts)
+plot(allEffects(model_A), multiline=T, ci.style="bars")
 
 model_B <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
+plot(allEffects(model_B), multiline=T, ci.style="bars")
 
 model_C <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + HIR1, data=allpts)
+plot(allEffects(model_C), multiline=T, ci.style="bars")
 
 model_D <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
+plot(allEffects(model_D), multiline=T, ci.style="bars")
 
-model_E <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
-plot(allEffects(model_E), multiline=T, ci.style="bars")
+#model_E <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
+#plot(allEffects(model_E), multiline=T, ci.style="bars")
 
-stargazer(model_A, model_B, model_C, model_D, model_E, type="html", align = F, style="all", single.row=T)
+stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
 
+model_A <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR, data=allpts)
+plot(allEffects(model_A), multiline=T, ci.style="bars")
+
+model_B <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
+plot(allEffects(model_B), multiline=T, ci.style="bars")
+
+model_C <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + HIR1, data=allpts)
+plot(allEffects(model_C), multiline=T, ci.style="bars")
+
+model_D <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
+plot(allEffects(model_D), multiline=T, ci.style="bars")
+
+#model_E <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
+#plot(allEffects(model_E), multiline=T, ci.style="bars")
+
+stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
+
+model_A <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR, data=allpts)
+plot(allEffects(model_A), multiline=T, ci.style="bars")
+
+model_B <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
+plot(allEffects(model_B), multiline=T, ci.style="bars")
+
+model_C <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + HIR1, data=allpts)
+plot(allEffects(model_C), multiline=T, ci.style="bars")
+
+model_D <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
+plot(allEffects(model_D), multiline=T, ci.style="bars")
+
+#model_E <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
+#plot(allEffects(model_E), multiline=T, ci.style="bars")
+
+stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
 ```
