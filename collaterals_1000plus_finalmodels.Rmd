@@ -3,7 +3,8 @@ title: "1000plus collateral flow & perfusion project"
 author: "Ahmed Khalil"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  html_document: default
+  html_document: 
+    toc: true
   word_document: default
 ---
 
@@ -22,6 +23,11 @@ library(magrittr)
 library(kableExtra)
 library(effects)
 library(pwr)
+library(papeR)
+
+# DEFINE WHETHER YOU WANT EFFECTS PLOTS FOR MIXED MODELS
+
+effplot = "N"
 
 # load data
 allpts <- read.table("all_data_v3.csv", header = T, sep=",")
@@ -110,7 +116,6 @@ allpts$TSI_dich <- c()
 occ_classfn <- read.table("occlusion_classfn.csv", header = T, sep=";")
 allpts <- merge(allpts, occ_classfn, by = "ID")
 
-
 # correctly code NaNs
 allpts[allpts=="NaN"]<-NA
 
@@ -119,16 +124,21 @@ OL = F
 ```
 ### General remarks on methods:
 **Reperfusion** is defined as a relative Tmax >4s change of >-50%.  
-The Tmax >4s change itself is referred to as **extent of reperfusion**.     
-Binarized **infarct growth** is defined as absolute lesion growth (FLAIR D5 - DWI D0) >7mL.  
 Surrogates for good collateral flow in this study are:  
   * Presence of reperfusion in non-recanalizers  
   * The hypoperfusion intensity ration (HIR) at baseline (lower is better), defined according to:  
-*Bang, O. Y. et al. (2008) ‘Determinants of the distribution and severity of hypoperfusion in patients with ischemic stroke.’, Neurology, 71(22), pp. 1804–11. doi: 10.1212/01.wnl.0000335929.06390.d3.*  
-  * The modified ASITN/SIR Collateral Flow Grading System (adapted for DSC-MRI), according to:
-*Campbell BC V, Christensen S, Tress BM, Churilov L, Desmond PM, Parsons MW, Alan Barber P, Levi CR, Bladin C, Donnan GA, Davis SM (2013) Failure of collateral blood flow is associated with infarct growth in ischemic stroke. J Cereb Blood Flow Metab 33:1168–1172.*
+*Bang, O. Y. et al. (2008) ‘Determinants of the distribution and severity of hypoperfusion in patients with ischemic stroke.’, Neurology*  
+  * The modified ASITN/SIR Collateral Flow Grading System (adapted for DSC-MRI), according to:  
+*Campbell BC V, Christensen S, Tress BM, Churilov L, Desmond PM, Parsons MW, Alan Barber P, Levi CR, Bladin C, Donnan GA, Davis SM (2013) Failure of collateral blood flow is associated with infarct growth in ischemic stroke. J Cereb Blood Flow Metab*
 
-The analyses in points 3,4,6,7 are performed using a robust GLM ("High Breakdown And High Efficiency Robust Linear Regression") using the R function "lmrob" from the "robustbase" package.  
+The outcome measures in this study are:  
+* Modified Rankin Scale at Day 90  
+* Extent of reperfusion - relative Tmax >4s change (%)  
+* Absolute infarct growth on DWI between days 1 and 2 (mL)  
+* Relative infarct growth on DWI between days 1 and 2 (%)  
+* Absolute infarct growth between days 1 (DWI) and 5 (FLAIR)  
+
+All regression analyses are performed using a robust GLM ("High Breakdown And High Efficiency Robust Linear Regression") using the R function "lmrob" from the "robustbase" package.  
 Citation of package:  
 *Martin Maechler, Peter Rousseeuw, Christophe Croux, Valentin Todorov, Andreas Ruckstuhl, Matias Salibian-Barrera, Tobias Verbeke, Manuel Koller, Eduardo L. T. Conceicao  and Maria Anna di Palma (2018). robustbase: Basic Robust Statistics R package version 0.93-0. URL http://CRAN.R-project.org/package=robustbase *   
 Citation of robust GLM:  
@@ -146,12 +156,13 @@ Citation of package:
   
 
 
-### 1. Descriptive statistics
+### Descriptive statistics
 ```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F, results="asis"}
 # descriptive stats
-dfSummary(allpts[,c(3,4,13,15)], plain.ascii = F, style="grid", graph.col = F, varnumbers = F, valid.col=F)
-allpts_cont <- allpts[,c(2,5,6:12,16:18,25,29,30)] # define continous variables
-#stargazer(allpts_cont, type="html", median = T, iqr = T, digits = 1)
+allpts_summ <- allpts[,c(2:13,15:22,29,30,33,34,35)] # define variables for summary
+kable(summarize(allpts_summ, type="numeric"))
+kable(summarize(allpts_summ, type="factor", variables=c("reperf", "higashida_D1", "higashida_D2", "Rekan", "circulation", "sex", "iv_tPR")))
+
 ```
 <style>
 
@@ -168,7 +179,14 @@ table, td, th {
 
 </style>
 
-### 2. What is the association between reperfusion and recanalization?
+### Are there differences in time from symptom onset to imaging in different recanalization groups?
+```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F}
+# test for differences in TSI according to recanalization status
+summary(aov(allpts$TSI~allpts$Rekan))
+boxplot(allpts$TSI~allpts$Rekan)
+```
+
+### What is the association between reperfusion and recanalization?
 ```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
 
 # plot recanalization according to reperfusion status
@@ -186,7 +204,7 @@ print(chisq.test(table(allpts$reperf, allpts$Rekan)))
 ```
 There is a statistically significant difference in the prevalence of reperfusion between the recanalization groups (i.e. reperfusion is associated with recanalization grade).
 
-### 3. Is there a difference in the extent of reperfusion between patients with anterior and posterior circulation strokes?
+### Is there a difference in the extent of reperfusion between patients with anterior and posterior circulation strokes?
 Models (1) & (2) - in non-recanalizers  
 Models (3) & (4) - in recanalizers  
 Models (2) & (4) - adjusted for IV tPA  
@@ -209,110 +227,157 @@ stargazer(model_1, model_2, model_3,model_4, type="html", align = F, style="all"
 
 boxplot(relTmax_4_change~circulation, data=allpts, xlab="Circulation", ylab="Extent of reperfusion (%)", outline=OL)
 
-
 ```
 
-### 4. What factors influence the extent of reperfusion?
-```{r, echo= FALSE, fig.width=6, fig.height=9, fig.align='center',dpi=300, warning=F, results="asis"}
-# check assumptions of robust GLM
-#par(mfrow=c(3,2))
-#plot(lmrob(allpts$relTmax_4_change~allpts$Rekan + allpts$circulation + allpts$TSI + allpts$iv_tPR))
-
-# perform robust GLM
-model_5 <- lmrob(allpts$relTmax_4_change~allpts$Rekan + allpts$iv_tPR + allpts$TSI + allpts$HIR1 + allpts$higashida_D1)
-
-# plot extent of reperfusion in different recanalization grades
-par(mfrow=c(1,1))
-boxplot(relTmax_4_change~Rekan, data=allpts, col=c("#1b9e77","#1b9e77"), ylab="Extent of reperfusion (%)", xlab="Recanalization", outline=OL)
-
-stargazer(model_5, type="html", align = F, style="all", single.row=T)
-```
-
-### 5. Is collateral flow at baseline (HIR) associated with DWI lesion volume and NIHSS at baseline and DWI lesion growth?
-```{r, echo= FALSE, fig.width=6, fig.height=6, fig.align='center',dpi=300, warning=F}
-plot(allpts$HIR1, allpts$DWIvol_d1, xlab="Hypoperfusion intensity ratio", ylab="DWI lesion volume on day 1 (mL)",col = alpha("black", 0.4), pch=16)
-print(cor.test(allpts$HIR1, allpts$DWIvol_d1, method="spearman"))
-
-plot(allpts$HIR1, allpts$NIHSS_ad, xlab="Hypoperfusion intensity ratio", ylab="NIHSS on admission",col = alpha("black", 0.4), pch=16)
-print(cor.test(allpts$HIR1, allpts$NIHSS_ad, method="spearman"))
-
-plot(allpts$HIR1, allpts$infarct_growth_D5FLAIR, xlab="Hypoperfusion intensity ratio", ylab="Absolute DWI lesion growth (mL)",col = alpha("black", 0.4), pch=16)
-print(cor.test(allpts$HIR1, allpts$infarct_growth_D5FLAIR, method="spearman"))
-
-plot(allpts$HIR1, allpts$rel_DWIgrowth, xlab="Hypoperfusion intensity ratio", ylab="Relative DWI lesion growth (%)",col = alpha("black", 0.4), pch=16)
-print(cor.test(allpts$HIR1, allpts$rel_DWIgrowth, method="spearman"))
-
-```
-
-
-
-### 6. Model comparisons
+### Clinical outcome
 ```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
+
 model_A <- lmrob(mRS_d90~NIHSS_ad + iv_tPR, data=allpts)
-plot(allEffects(model_A), multiline=T, ci.style="bars")
+boxplot(allpts$mRS_d90~allpts$iv_tPR, ylab="mRS (day 90)", xlab="IV thrombolysis")
+boxplot(allpts$NIHSS_ad~allpts$mRS_d90, xlab="mRS (day 90)", ylab="NIHSS on admission")
 
 model_B <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
-plot(allEffects(model_B), multiline=T, ci.style="bars")
+boxplot(mRS_d90~Rekan + reperf, data=allpts, col=c("#1b9e77","#1b9e77","#1b9e77","#d95f02","#d95f02","#d95f02"), ylab="mRS day 90", outline=OL, xaxt="n", xlab="Recanalization")
+axis(side=1, at=c(1,2,3,4,5,6), labels=c("None","Partial","Full","None","Partial","Full"))
+legend("topright", legend = c("Non-reperfused","Reperfused"), fill=c("#1b9e77","#d95f02"))
 
 model_C <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + HIR1, data=allpts)
-plot(allEffects(model_C), multiline=T, ci.style="bars")
+boxplot(allpts$HIR1~allpts$mRS_d90, xlab="mRS (day 90)", ylab="HIR")
 
 model_D <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
-plot(allEffects(model_D), multiline=T, ci.style="bars")
+boxplot(allpts$mRS_d90~allpts$higashida_D1, ylab="mRS (day 90)", xlab="Higashida score D1", xlim=c(0.5,5.5), outline=OL)
 
-#model_E <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
-#plot(allEffects(model_E), multiline=T, ci.style="bars")
+model_E <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + higashida_D2, data=allpts)
+boxplot(allpts$mRS_d90~allpts$higashida_D2, ylab="mRS (day 90)", xlab="Higashida score D2", xlim=c(0.5,5.5), outline=OL)
 
-stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
-
-model_A <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR, data=allpts)
+if (effplot == "Y") {
 plot(allEffects(model_A), multiline=T, ci.style="bars")
+plot(allEffects(model_B), multiline=T, ci.style="bars")
+plot(allEffects(model_C), multiline=T, ci.style="bars")
+plot(allEffects(model_D), multiline=T, ci.style="bars")
+plot(allEffects(model_E), multiline=T, ci.style="bars")
+
+}
+
+stargazer(model_A, model_B, model_C, model_D, model_E, type="html", align = F, style="all", single.row=T)
+```
+
+### Extent of reperfusion
+```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
+
+model_A <- lmrob(relTmax_4_change~NIHSS_ad + iv_tPR, data=allpts)
+boxplot(allpts$relTmax_4_change~allpts$iv_tPR, ylab="Extent of reperfusion", xlab="IV thrombolysis", outline=OL)
+plot(allpts$NIHSS_ad,allpts$relTmax_4_change, ylab="Extent of reperfusion", xlab="NIHSS on admission")
+
+model_B <- lmrob(relTmax_4_change~NIHSS_ad + iv_tPR + Rekan, data=allpts)
+boxplot(relTmax_4_change~Rekan, data=allpts, ylab="Extent of reperfusion", outline=OL, xlab="Recanalization")
+
+model_C <- lmrob(relTmax_4_change~NIHSS_ad + iv_tPR + HIR1, data=allpts)
+plot(allpts$HIR1,allpts$relTmax_4_change, xlab="HIR", ylab="Extent of reperfusion")
+
+model_D <- lmrob(relTmax_4_change~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
+boxplot(allpts$relTmax_4_change~allpts$higashida_D1, ylab="Extent of reperfusion", xlab="Higashida score D1", xlim=c(0.5,5.5), outline=OL)
+
+model_E <- lmrob(relTmax_4_change~NIHSS_ad + iv_tPR + higashida_D2, data=allpts)
+boxplot(allpts$relTmax_4_change~allpts$higashida_D2, ylab="Extent of reperfusion", xlab="Higashida score D2", xlim=c(0.5,5.5), outline=OL)
+
+if (effplot == "Y") {
+plot(allEffects(model_A), multiline=T, ci.style="bars")
+plot(allEffects(model_B), multiline=T, ci.style="bars")
+plot(allEffects(model_C), multiline=T, ci.style="bars")
+plot(allEffects(model_D), multiline=T, ci.style="bars")
+plot(allEffects(model_E), multiline=T, ci.style="bars")
+
+}
+
+stargazer(model_A, model_B, model_C, model_D, model_E, type="html", align = F, style="all", single.row=T)
+```
+
+### Relative infarct growth (D1 - D2)
+```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
+model_A <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR, data=allpts)
+boxplot(allpts$rel_DWIgrowth~allpts$iv_tPR, ylab="Relative infarct growth (D1 - D2)", xlab="IV thrombolysis", outline=OL)
+plot(allpts$NIHSS_ad,allpts$rel_DWIgrowth, ylab="Relative infarct growth (D1 - D2)", xlab="NIHSS on admission")
 
 model_B <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
-plot(allEffects(model_B), multiline=T, ci.style="bars")
+boxplot(rel_DWIgrowth~Rekan, data=allpts, ylab="Relative infarct growth (D1 - D2)", outline=OL, xlab="Recanalization")
 
 model_C <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + HIR1, data=allpts)
-plot(allEffects(model_C), multiline=T, ci.style="bars")
+plot(allpts$HIR1,allpts$rel_DWIgrowth, xlab="HIR", ylab="Relative infarct growth (D1 - D2)")
 
 model_D <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
-plot(allEffects(model_D), multiline=T, ci.style="bars")
+boxplot(allpts$rel_DWIgrowth~allpts$higashida_D1, ylab="Relative infarct growth (D1 - D2)", xlab="Higashida score D1", xlim=c(0.5,5.5), outline=OL)
 
-#model_E <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
-#plot(allEffects(model_E), multiline=T, ci.style="bars")
+model_E <- lmrob(rel_DWIgrowth~NIHSS_ad + iv_tPR + higashida_D2, data=allpts)
+boxplot(allpts$rel_DWIgrowth~allpts$higashida_D2, ylab="Relative infarct growth (D1 - D2)", xlab="Higashida score D2", xlim=c(0.5,5.5), outline=OL)
 
-stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
-
-model_A <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR, data=allpts)
+if (effplot == "Y") {
 plot(allEffects(model_A), multiline=T, ci.style="bars")
+plot(allEffects(model_B), multiline=T, ci.style="bars")
+plot(allEffects(model_C), multiline=T, ci.style="bars")
+plot(allEffects(model_D), multiline=T, ci.style="bars")
+plot(allEffects(model_E), multiline=T, ci.style="bars")
+}
+
+stargazer(model_A, model_B, model_C, model_D, model_E, type="html", align = F, style="all", single.row=T)
+```
+
+### Absolute infarct growth (D1 - D2)
+```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
+model_A <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR, data=allpts)
+boxplot(allpts$DWIgrowth~allpts$iv_tPR, ylab="Absolute infarct growth (D1 - D2)", xlab="IV thrombolysis", outline=OL)
+plot(allpts$NIHSS_ad,allpts$DWIgrowth, ylab="Absolute infarct growth (D1 - D2)", xlab="NIHSS on admission")
 
 model_B <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
-plot(allEffects(model_B), multiline=T, ci.style="bars")
+boxplot(DWIgrowth~Rekan, data=allpts, ylab="Absolute infarct growth (D1 - D2)", outline=OL, xlab="Recanalization")
 
 model_C <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + HIR1, data=allpts)
-plot(allEffects(model_C), multiline=T, ci.style="bars")
+plot(allpts$HIR1,allpts$DWIgrowth, xlab="HIR", ylab="Absolute infarct growth (D1 - D2)")
 
 model_D <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
-plot(allEffects(model_D), multiline=T, ci.style="bars")
+boxplot(allpts$DWIgrowth~allpts$higashida_D1, ylab="Absolute infarct growth (D1 - D2)", xlab="Higashida score D1", xlim=c(0.5,5.5), outline=OL)
 
-#model_E <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
-#plot(allEffects(model_E), multiline=T, ci.style="bars")
+model_E <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + higashida_D2, data=allpts)
+boxplot(allpts$DWIgrowth~allpts$higashida_D2, ylab="Absolute infarct growth (D1 - D2)", xlab="Higashida score D2", xlim=c(0.5,5.5), outline=OL)
 
-stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
-
-model_A <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR, data=allpts)
+if (effplot == "Y") {
 plot(allEffects(model_A), multiline=T, ci.style="bars")
+plot(allEffects(model_B), multiline=T, ci.style="bars")
+plot(allEffects(model_C), multiline=T, ci.style="bars")
+plot(allEffects(model_D), multiline=T, ci.style="bars")
+plot(allEffects(model_E), multiline=T, ci.style="bars")
+
+}
+
+stargazer(model_A, model_B, model_C, model_D, model_E, type="html", align = F, style="all", single.row=T)
+```
+
+### Absolute infarct growth (D1 - D5)
+```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
+model_A <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR, data=allpts)
+boxplot(allpts$infarct_growth_D5FLAIR~allpts$iv_tPR, ylab="Absolute infarct growth (D1 - D5)", xlab="IV thrombolysis", outline=OL)
+plot(allpts$NIHSS_ad,allpts$infarct_growth_D5FLAIR, ylab="Absolute infarct growth (D1 - D5)", xlab="NIHSS on admission")
 
 model_B <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + Rekan*reperf, data=allpts)
-plot(allEffects(model_B), multiline=T, ci.style="bars")
+boxplot(infarct_growth_D5FLAIR~Rekan, data=allpts, ylab="Absolute infarct growth (D1 - D5)", outline=OL, xlab="Recanalization")
 
 model_C <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + HIR1, data=allpts)
-plot(allEffects(model_C), multiline=T, ci.style="bars")
+plot(allpts$HIR1,allpts$infarct_growth_D5FLAIR, xlab="HIR", ylab="Absolute infarct growth (D1 - D5)")
 
 model_D <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + higashida_D1, data=allpts)
+boxplot(allpts$infarct_growth_D5FLAIR~allpts$higashida_D1, ylab="Absolute infarct growth (D1 - D5)", xlab="Higashida score D1", xlim=c(0.5,5.5), outline=OL)
+
+model_E <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + higashida_D2, data=allpts)
+boxplot(allpts$infarct_growth_D5FLAIR~allpts$higashida_D2, ylab="Absolute infarct growth (D1 - D5)", xlab="Higashida score D2", xlim=c(0.5,5.5), outline=OL)
+
+if (effplot == "Y") {
+plot(allEffects(model_A), multiline=T, ci.style="bars")
+plot(allEffects(model_B), multiline=T, ci.style="bars")
+plot(allEffects(model_C), multiline=T, ci.style="bars")
 plot(allEffects(model_D), multiline=T, ci.style="bars")
+plot(allEffects(model_E), multiline=T, ci.style="bars")
 
-#model_E <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + higashida_change, data=allpts)
-#plot(allEffects(model_E), multiline=T, ci.style="bars")
+}
 
-stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
+stargazer(model_A, model_B, model_C, model_D, model_E, type="html", align = F, style="all", single.row=T)
 ```
