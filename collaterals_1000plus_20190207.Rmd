@@ -203,17 +203,17 @@ table, td, th {
 ### Predictors of extent of reperfusion 
 ```{r, echo= FALSE, fig.width=5, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
-model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR, data=allpts, setting = "KS2014")
+model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$Tmax_6_reperf_rel~allpts$iv_tPR, ylab="Extent of reperfusion", xlab="IV thrombolysis", outline=OL)
 plot(allpts$NIHSS_ad,allpts$Tmax_6_reperf_rel, ylab="Extent of reperfusion", xlab="NIHSS on admission")
 
-model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan, data=allpts, setting = "KS2014")
+model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan + circulation, data=allpts, setting = "KS2014")
 boxplot(Tmax_6_reperf_rel~Rekan, data=allpts, ylab="Extent of reperfusion", outline=OL, xlab="Recanalization")
 
-model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1 + Rekan, data=allpts, setting = "KS2014")
+model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1 + Rekan + circulation, data=allpts, setting = "KS2014")
 plot(allpts$HIR1,allpts$Tmax_6_reperf_rel, xlab="HIR", ylab="Extent of reperfusion")
 
-model_D <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin + Rekan, data=allpts, setting = "KS2014")
+model_D <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin + Rekan + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$Tmax_6_reperf_rel~allpts$higashida_D1_bin, ylab="Extent of reperfusion", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
 if (effplot == "Y") {
@@ -236,14 +236,14 @@ stargazer(anova(model_A,model_D), type="html", align = F, style="all", single.ro
 par(mfrow=c(2,2))
 
 allpts_nonrekan <- allpts[which(allpts$Rekan=="None"),]
-model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR, data=allpts_nonrekan, setting = "KS2014")
+model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + circulation, data=allpts_nonrekan, setting = "KS2014")
 boxplot(allpts_nonrekan$Tmax_6_reperf_rel~allpts_nonrekan$iv_tPR, ylab="Extent of reperfusion", xlab="IV thrombolysis", outline=OL)
 plot(allpts_nonrekan$NIHSS_ad,allpts_nonrekan$Tmax_6_reperf_rel, ylab="Extent of reperfusion", xlab="NIHSS on admission")
 
-model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1, data=allpts_nonrekan, setting = "KS2014")
+model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1 + circulation, data=allpts_nonrekan, setting = "KS2014")
 plot(allpts_nonrekan$HIR1,allpts_nonrekan$Tmax_6_reperf_rel, xlab="HIR", ylab="Extent of reperfusion")
 
-model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin, data=allpts_nonrekan, setting = "KS2014")
+model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin + circulation, data=allpts_nonrekan, setting = "KS2014")
 boxplot(allpts_nonrekan$Tmax_6_reperf_rel~allpts_nonrekan$higashida_D1_bin, ylab="Extent of reperfusion", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
 
@@ -264,14 +264,14 @@ stargazer(anova(model_A,model_C), type="html", align = F, style="all", single.ro
 par(mfrow=c(2,2))
 
 allpts_prekan <- allpts[which(allpts$Rekan=="Partial"),]
-model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR, data=allpts_prekan, setting = "KS2014")
+model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + circulation, data=allpts_prekan, setting = "KS2014")
 boxplot(allpts_prekan$Tmax_6_reperf_rel~allpts_prekan$iv_tPR, ylab="Extent of reperfusion", xlab="IV thrombolysis", outline=OL)
 plot(allpts_prekan$NIHSS_ad,allpts_prekan$Tmax_6_reperf_rel, ylab="Extent of reperfusion", xlab="NIHSS on admission")
 
-model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1, data=allpts_prekan, setting = "KS2014")
+model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1 + circulation, data=allpts_prekan, setting = "KS2014")
 plot(allpts_prekan$HIR1,allpts_prekan$Tmax_6_reperf_rel, xlab="HIR", ylab="Extent of reperfusion")
 
-model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin, data=allpts_prekan, setting = "KS2014")
+model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin + circulation, data=allpts_prekan, setting = "KS2014")
 boxplot(allpts_prekan$Tmax_6_reperf_rel~allpts_prekan$higashida_D1_bin, ylab="Extent of reperfusion", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
 
@@ -293,14 +293,14 @@ stargazer(anova(model_A,model_C), type="html", align = F, style="all", single.ro
 par(mfrow=c(2,2))
 
 allpts_frekan <- allpts[which(allpts$Rekan=="Full"),]
-model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR, data=allpts_frekan, setting = "KS2014")
+model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + circulation, data=allpts_frekan, setting = "KS2014")
 boxplot(allpts_frekan$Tmax_6_reperf_rel~allpts_frekan$iv_tPR, ylab="Extent of reperfusion", xlab="IV thrombolysis", outline=OL)
 plot(allpts_frekan$NIHSS_ad,allpts_frekan$Tmax_6_reperf_rel, ylab="Extent of reperfusion", xlab="NIHSS on admission")
 
-model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1, data=allpts_frekan, setting = "KS2014")
+model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1 + circulation, data=allpts_frekan, setting = "KS2014")
 plot(allpts_frekan$HIR1,allpts_frekan$Tmax_6_reperf_rel, xlab="HIR", ylab="Extent of reperfusion")
 
-model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin, data=allpts_frekan, setting = "KS2014")
+model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin + circulation, data=allpts_frekan, setting = "KS2014")
 boxplot(allpts_frekan$Tmax_6_reperf_rel~allpts_frekan$higashida_D1_bin, ylab="Extent of reperfusion", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
 
@@ -321,23 +321,23 @@ stargazer(anova(model_A,model_C), type="html", align = F, style="all", single.ro
 ```{r, echo= FALSE, fig.width=5, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
-model_A <- lmrob(mRS_d90~HIR1, data=allpts, setting = "KS2014")
+model_A <- lmrob(mRS_d90~HIR1 + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$mRS_d90~allpts$iv_tPR, ylab="mRS (day 90)", xlab="IV thrombolysis")
 boxplot(allpts$NIHSS_ad~allpts$mRS_d90, xlab="mRS (day 90)", ylab="NIHSS on admission")
 
-model_B <- lmrob(mRS_d90~HIR1 + NIHSS_ad + iv_tPR + Rekan + Tmax_6_reperf_rel, data=allpts, setting = "KS2014")
+model_B <- lmrob(mRS_d90~HIR1 + NIHSS_ad + iv_tPR + Rekan + Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 boxplot(mRS_d90~Rekan, data=allpts, ylab="mRS day 90", outline=OL, xaxt="n", xlab="Recanalization")
 axis(side=1, at=c(1,2,3), labels=c("None","Partial","Full"))
 
-model_C <- lmrob(mRS_d90~higashida_D1_bin, data=allpts, setting = "KS2014")
+model_C <- lmrob(mRS_d90~higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$HIR1~allpts$mRS_d90, xlab="mRS (day 90)", ylab="HIR")
 
-model_D <- lmrob(mRS_d90~higashida_D1_bin + NIHSS_ad + iv_tPR  + Tmax_6_reperf_rel + Rekan, data=allpts, setting = "KS2014")
+model_D <- lmrob(mRS_d90~higashida_D1_bin + NIHSS_ad + iv_tPR  + Tmax_6_reperf_rel + Rekan + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$mRS_d90~allpts$higashida_D1_bin, ylab="mRS (day 90)", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
-model_E <- lmrob(mRS_d90~Rekan*Tmax_6_reperf_rel, data=allpts, setting = "KS2014")
+model_E <- lmrob(mRS_d90~Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 
-model_F <- lmrob(mRS_d90~Rekan*Tmax_6_reperf_rel + NIHSS_ad + iv_tPR, data=allpts, setting = "KS2014")
+model_F <- lmrob(mRS_d90~Rekan*Tmax_6_reperf_rel + NIHSS_ad + iv_tPR + circulation, data=allpts, setting = "KS2014")
 
 
 if (effplot == "Y") {
@@ -359,22 +359,22 @@ stargazer(anova(model_E,model_F), type="html", align = F, style="all", single.ro
 ```{r, echo= FALSE, fig.width=5, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
-model_A <- lmrob(DWIgrowth~HIR1, data=allpts, setting = "KS2014")
+model_A <- lmrob(DWIgrowth~HIR1 + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$DWIgrowth~allpts$iv_tPR, ylab="Absolute infarct growth (D1 - D2)", xlab="IV thrombolysis", outline=OL)
 plot(allpts$NIHSS_ad,allpts$DWIgrowth, ylab="Absolute infarct growth (D1 - D2)", xlab="NIHSS on admission")
 
-model_B <- lmrob(DWIgrowth~HIR1 + NIHSS_ad + iv_tPR + Tmax_6_reperf_rel + Rekan, data=allpts, setting = "KS2014")
+model_B <- lmrob(DWIgrowth~HIR1 + NIHSS_ad + iv_tPR + Tmax_6_reperf_rel + Rekan + circulation, data=allpts, setting = "KS2014")
 boxplot(DWIgrowth~Rekan, data=allpts, ylab="Absolute infarct growth (D1 - D2)", outline=OL, xlab="Recanalization")
 
-model_C <- lmrob(DWIgrowth~higashida_D1_bin, data=allpts, setting = "KS2014")
+model_C <- lmrob(DWIgrowth~higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
 plot(allpts$HIR1,allpts$DWIgrowth, xlab="HIR", ylab="Absolute infarct growth (D1 - D2)")
 
-model_D <- lmrob(DWIgrowth~higashida_D1_bin + NIHSS_ad + iv_tPR + Rekan + Tmax_6_reperf_rel, data=allpts, setting = "KS2014")
+model_D <- lmrob(DWIgrowth~higashida_D1_bin + NIHSS_ad + iv_tPR + Rekan + Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$DWIgrowth~allpts$higashida_D1_bin, ylab="Absolute infarct growth (D1 - D2)", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
-model_E <- lmrob(DWIgrowth~Rekan*Tmax_6_reperf_rel, data=allpts, setting = "KS2014")
+model_E <- lmrob(DWIgrowth~Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 
-model_F <- lmrob(DWIgrowth~Rekan*Tmax_6_reperf_rel + NIHSS_ad + iv_tPR, data=allpts, setting = "KS2014")
+model_F <- lmrob(DWIgrowth~Rekan*Tmax_6_reperf_rel + NIHSS_ad + iv_tPR + circulation, data=allpts, setting = "KS2014")
 
 
 if (effplot == "Y") {
@@ -397,22 +397,22 @@ stargazer(anova(model_E,model_F), type="html", align = F, style="all", single.ro
 ```{r, echo= FALSE, fig.width=5, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
-model_A <- lmrob(infarct_growth_D5FLAIR~HIR1, data=allpts, setting="KS2014")
+model_A <- lmrob(infarct_growth_D5FLAIR~HIR1 + circulation, data=allpts, setting="KS2014")
 boxplot(allpts$infarct_growth_D5FLAIR~allpts$iv_tPR, ylab="Absolute infarct growth (D1 - D5)", xlab="IV thrombolysis", outline=OL)
 plot(allpts$NIHSS_ad,allpts$infarct_growth_D5FLAIR, ylab="Absolute infarct growth (D1 - D5)", xlab="NIHSS on admission")
 
-model_B <- lmrob(infarct_growth_D5FLAIR~HIR1 + NIHSS_ad + iv_tPR + Rekan + Tmax_6_reperf_rel, data=allpts, setting="KS2014")
+model_B <- lmrob(infarct_growth_D5FLAIR~HIR1 + NIHSS_ad + iv_tPR + Rekan + Tmax_6_reperf_rel + circulation, data=allpts, setting="KS2014")
 boxplot(infarct_growth_D5FLAIR~Rekan, data=allpts, ylab="Absolute infarct growth (D1 - D5)", outline=OL, xlab="Recanalization")
 
-model_C <- lmrob(infarct_growth_D5FLAIR~higashida_D1_bin, data=allpts, setting="KS2014")
+model_C <- lmrob(infarct_growth_D5FLAIR~higashida_D1_bin + circulation, data=allpts, setting="KS2014")
 plot(allpts$HIR1,allpts$infarct_growth_D5FLAIR, xlab="HIR", ylab="Absolute infarct growth (D1 - D5)")
 
-model_D <- lmrob(infarct_growth_D5FLAIR~higashida_D1_bin + NIHSS_ad + iv_tPR  + Rekan + Tmax_6_reperf_rel, data=allpts, setting="KS2014")
+model_D <- lmrob(infarct_growth_D5FLAIR~higashida_D1_bin + NIHSS_ad + iv_tPR  + Rekan + Tmax_6_reperf_rel + circulation, data=allpts, setting="KS2014")
 boxplot(allpts$infarct_growth_D5FLAIR~allpts$higashida_D1_bin, ylab="Absolute infarct growth (D1 - D5)", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
-model_E <- lmrob(infarct_growth_D5FLAIR~Rekan*Tmax_6_reperf_rel, data=allpts, setting = "KS2014")
+model_E <- lmrob(infarct_growth_D5FLAIR~Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 
-model_F <- lmrob(infarct_growth_D5FLAIR~Rekan*Tmax_6_reperf_rel + NIHSS_ad + iv_tPR, data=allpts, setting = "KS2014")
+model_F <- lmrob(infarct_growth_D5FLAIR~Rekan*Tmax_6_reperf_rel + NIHSS_ad + iv_tPR + circulation, data=allpts, setting = "KS2014")
 
 
 if (effplot == "Y") {
