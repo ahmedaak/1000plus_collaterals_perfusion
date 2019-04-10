@@ -147,7 +147,7 @@ Citation of robust GLM:
 For visualization (not analysis) purposes, outliers are **not** shown on the boxplots. 
 
 **Power analysis:**
-`r pwrtest <- pwr.f2.test(u= 6, f2=0.1, sig.level = 0.05, power=0.8)`
+`r pwrtest <- pwr.f2.test(u= 8, f2=0.1, sig.level = 0.05, power=0.8)`
 
 Sample size needed to detect a minimum effect size (R2/1-R2)  of `r pwrtest$f2` at significance level of `r pwrtest$sig.level` and power of `r pwrtest$power` with `r pwrtest$u` predictors (including interactions) = `r round(pwrtest$v + pwrtest$u + 1)`. Performed with the R package "pwr".  
 Citation of package:  
@@ -210,10 +210,10 @@ plot(allpts$NIHSS_ad,allpts$Tmax_6_reperf_rel, ylab="Extent of reperfusion", xla
 model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan + circulation, data=allpts, setting = "KS2014")
 boxplot(Tmax_6_reperf_rel~Rekan, data=allpts, ylab="Extent of reperfusion", outline=OL, xlab="Recanalization")
 
-model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + HIR1 + Rekan + circulation, data=allpts, setting = "KS2014")
+model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan*HIR1 + circulation, data=allpts, setting = "KS2014")
 plot(allpts$HIR1,allpts$Tmax_6_reperf_rel, xlab="HIR", ylab="Extent of reperfusion")
 
-model_D <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + higashida_D1_bin + Rekan + circulation, data=allpts, setting = "KS2014")
+model_D <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
 boxplot(allpts$Tmax_6_reperf_rel~allpts$higashida_D1_bin, ylab="Extent of reperfusion", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
 if (effplot == "Y") {
