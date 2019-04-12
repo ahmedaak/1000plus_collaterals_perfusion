@@ -201,30 +201,18 @@ table, td, th {
 </style>
 
 ### Predictors of extent of reperfusion 
-```{r, echo= FALSE, fig.width=10, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
-par(mfrow=c(3,2))
+```{r, echo= FALSE, fig.width=3, fig.height=3, fig.align='center',dpi=300, warning=F, results="asis"}
 model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + circulation, data=allpts, setting = "KS2014")
-boxplot(allpts$Tmax_6_reperf_rel~allpts$iv_tPR, ylab="Extent of reperfusion", xlab="IV thrombolysis", outline=OL)
-plot(allpts$NIHSS_ad,allpts$Tmax_6_reperf_rel, ylab="Extent of reperfusion", xlab="NIHSS on admission")
-
 model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan + circulation, data=allpts, setting = "KS2014")
-boxplot(Tmax_6_reperf_rel~Rekan, data=allpts, ylab="Extent of reperfusion", outline=OL, xlab="Recanalization")
-
 model_C <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan*HIR1 + circulation, data=allpts, setting = "KS2014")
-plot(allpts$HIR1,allpts$Tmax_6_reperf_rel, xlab="HIR", ylab="Extent of reperfusion")
-
 model_D <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
-boxplot(allpts$Tmax_6_reperf_rel~allpts$higashida_D1_bin, ylab="Extent of reperfusion", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
 
-if (effplot == "Y") {
-#plot(allEffects(model_A), multiline=T, ci.style="bars")
-#plot(allEffects(model_B), multiline=T, ci.style="bars")
-par(mfrow=c(2,2))
-plot(allEffects(model_C), multiline=T, ci.style="bars")
-par(mfrow=c(3,2))
-plot(allEffects(model_D), multiline=T, ci.style="bars")
-
-}
+pdf("reperf_RekanHIR.pdf", width = 5, height = 5)
+plot(effect(mod = model_C, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+dev.off()
+pdf("reperf_RekanHig.pdf", width = 5, height = 5)
+plot(effect(mod = model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
+dev.off()
 
 stargazer(model_A, model_B, model_C, model_D, type="html", align = F, style="all", single.row=T)
 stargazer(anova(model_A,model_B), type="html", align = F, style="all", single.row=T, title = "1 vs 2")
@@ -235,39 +223,25 @@ stargazer(model_C, model_D, type="html", align = F, style="all", single.row=T, c
 ```
 
 ### Predictors of clinical outcome
-```{r, echo= FALSE, fig.width=10, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
+```{r, echo= FALSE, fig.width=4, fig.height=11, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
 model_A <- lmrob(mRS_d90~HIR1, data=allpts, setting = "KS2014")
-boxplot(allpts$mRS_d90~allpts$iv_tPR, ylab="mRS (day 90)", xlab="IV thrombolysis")
-boxplot(allpts$NIHSS_ad~allpts$mRS_d90, xlab="mRS (day 90)", ylab="NIHSS on admission")
-
 model_B <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + Rekan*HIR1 + circulation, data=allpts, setting = "KS2014")
-boxplot(mRS_d90~Rekan, data=allpts, ylab="mRS day 90", outline=OL, xaxt="n", xlab="Recanalization")
-axis(side=1, at=c(1,2,3), labels=c("None","Partial","Full"))
-
 model_C <- lmrob(mRS_d90~higashida_D1_bin, data=allpts, setting = "KS2014")
-boxplot(allpts$HIR1~allpts$mRS_d90, xlab="mRS (day 90)", ylab="HIR")
-
 model_D <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
-boxplot(allpts$mRS_d90~allpts$higashida_D1_bin, ylab="mRS (day 90)", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
-
 model_E <- lmrob(mRS_d90~Tmax_6_reperf_rel, data=allpts, setting = "KS2014")
-
 model_F <- lmrob(mRS_d90~NIHSS_ad + iv_tPR + Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 
-
-if (effplot == "Y") {
-#plot(allEffects(model_A), multiline=T, ci.style="bars")
-  par(mfrow=c(2,2))
-  plot(allEffects(model_B), multiline=T, ci.style="bars")
-par(mfrow=c(3,2))
-#plot(allEffects(model_C), multiline=T, ci.style="bars")
-plot(allEffects(model_D), multiline=T, ci.style="bars")
-par(mfrow=c(3,2))
-#plot(allEffects(model_E), multiline=T, ci.style="bars")
-plot(allEffects(model_F), multiline=T, ci.style="bars")
-}
+pdf("mRS_RekanHIR.pdf", width = 5, height = 5)
+plot(effect(mod=model_B, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+dev.off()
+pdf("mRS_RekanHig.pdf", width = 5, height = 5)
+plot(effect(mod=model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
+dev.off()
+pdf("mRS_RekanReperf.pdf", width = 5, height = 5)
+plot(effect(mod=model_F, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
+dev.off()
 
 stargazer(model_A, model_B, model_C, model_D, model_E, model_F, type="html", align = F, style="all", single.row=T)
 stargazer(anova(model_A,model_B), type="html", align = F, style="all", single.row=T, title = "1 vs 2")
@@ -282,35 +256,21 @@ stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single
 par(mfrow=c(3,2))
 
 model_A <- lmrob(DWIgrowth~HIR1 + circulation, data=allpts, setting = "KS2014")
-boxplot(allpts$DWIgrowth~allpts$iv_tPR, ylab="Absolute infarct growth (D1 - D2)", xlab="IV thrombolysis", outline=OL)
-plot(allpts$NIHSS_ad,allpts$DWIgrowth, ylab="Absolute infarct growth (D1 - D2)", xlab="NIHSS on admission")
-
 model_B <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*HIR1 + circulation, data=allpts, setting = "KS2014")
-boxplot(DWIgrowth~Rekan, data=allpts, ylab="Absolute infarct growth (D1 - D2)", outline=OL, xlab="Recanalization")
-
 model_C <- lmrob(DWIgrowth~higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
-plot(allpts$HIR1,allpts$DWIgrowth, xlab="HIR", ylab="Absolute infarct growth (D1 - D2)")
-
 model_D <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
-boxplot(allpts$DWIgrowth~allpts$higashida_D1_bin, ylab="Absolute infarct growth (D1 - D2)", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
-
 model_E <- lmrob(DWIgrowth~Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
-
 model_F <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR +Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 
-
-if (effplot == "Y") {
-#plot(allEffects(model_A), multiline=T, ci.style="bars")
-par(mfrow=c(2,2))
-plot(allEffects(model_B), multiline=T, ci.style="bars")
-par(mfrow=c(3,2))
-#plot(allEffects(model_C), multiline=T, ci.style="bars")
-plot(allEffects(model_D), multiline=T, ci.style="bars")
-par(mfrow=c(3,2))
-#plot(allEffects(model_E), multiline=T, ci.style="bars")
-plot(allEffects(model_F), multiline=T, ci.style="bars")
-
-}
+pdf("DWIg_RekanHIR.pdf", width = 5, height = 5)
+plot(effect(mod=model_B, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+dev.off()
+pdf("DWIg_RekanHig.pdf", width = 5, height = 5)
+plot(effect(mod=model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
+dev.off()
+pdf("DWIg_RekanReperf.pdf", width = 5, height = 5)
+plot(effect(mod=model_F, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
+dev.off()
 
 stargazer(model_A, model_B, model_C, model_D, model_E, model_F, type="html", align = F, style="all", single.row=T)
 stargazer(anova(model_A,model_B), type="html", align = F, style="all", single.row=T, title = "1 vs 2")
@@ -325,33 +285,21 @@ stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single
 par(mfrow=c(3,2))
 
 model_A <- lmrob(infarct_growth_D5FLAIR~HIR1 + circulation, data=allpts, setting="KS2014")
-boxplot(allpts$infarct_growth_D5FLAIR~allpts$iv_tPR, ylab="Absolute infarct growth (D1 - D5)", xlab="IV thrombolysis", outline=OL)
-plot(allpts$NIHSS_ad,allpts$infarct_growth_D5FLAIR, ylab="Absolute infarct growth (D1 - D5)", xlab="NIHSS on admission")
-
 model_B <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + Rekan*HIR1 + circulation, data=allpts, setting="KS2014")
-boxplot(infarct_growth_D5FLAIR~Rekan, data=allpts, ylab="Absolute infarct growth (D1 - D5)", outline=OL, xlab="Recanalization")
-
 model_C <- lmrob(infarct_growth_D5FLAIR~higashida_D1_bin + circulation, data=allpts, setting="KS2014")
-plot(allpts$HIR1,allpts$infarct_growth_D5FLAIR, xlab="HIR", ylab="Absolute infarct growth (D1 - D5)")
-
 model_D <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + Rekan*higashida_D1_bin  + circulation, data=allpts, setting="KS2014")
-boxplot(allpts$infarct_growth_D5FLAIR~allpts$higashida_D1_bin, ylab="Absolute infarct growth (D1 - D5)", xlab="Higashida score D1", xlim=c(0.5,2.5), outline=OL)
-
 model_E <- lmrob(infarct_growth_D5FLAIR~Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
-
 model_F <- lmrob(infarct_growth_D5FLAIR~NIHSS_ad + iv_tPR + Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 
-if (effplot == "Y") {
-#plot(allEffects(model_A), multiline=T, ci.style="bars")
-  par(mfrow=c(2,2))
-plot(allEffects(model_B), multiline=T, ci.style="bars")
-#plot(allEffects(model_C), multiline=T, ci.style="bars")
-  par(mfrow=c(2,2))
-plot(allEffects(model_D), multiline=T, ci.style="bars")
-#plot(allEffects(model_E), multiline=T, ci.style="bars")
-  par(mfrow=c(2,2))
-plot(allEffects(model_F), multiline=T, ci.style="bars")
-}
+pdf("FLAIRg_RekanHIR.pdf", width = 5, height = 5)
+plot(effect(mod=model_B, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+dev.off()
+pdf("FLAIRg_RekanHig.pdf", width = 5, height = 5)
+plot(effect(mod=model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
+dev.off()
+pdf("FLAIRg_RekanReperf.pdf", width = 5, height = 5)
+plot(effect(mod=model_F, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
+dev.off()
 
 stargazer(model_A, model_B, model_C, model_D, model_E, model_F, type="html", align = F, style="all", single.row=T)
 stargazer(anova(model_A,model_B), type="html", align = F, style="all", single.row=T, title = "1 vs 2")
