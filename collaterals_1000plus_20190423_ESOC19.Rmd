@@ -224,7 +224,7 @@ plotreg(file="reperf_models.pdf",mfrow=FALSE,list(model_C,model_D), custom.coef.
 ```
 
 ### Predictors of clinical outcome
-```{r, echo= FALSE, fig.width=3.54, fig.height=2.36, fig.align='center',dpi=300, warning=F, results="asis"}
+```{r, echo= FALSE, fig.width=10, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
 model_A <- lmrob(mRS_d90~HIR1, data=allpts, setting = "KS2014")
@@ -247,6 +247,8 @@ dev.off()
 stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)", "Recanalization (partial)*Reperfusion", "Recanalization (full)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of long-term clinical outcome (mRS day 90)",dep.var.labels.include = FALSE, model.numbers = FALSE)
 
 plotreg(file="mRS_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3)
+
+plotreg(file="mRS_models_nolabels.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("","","","","","","","",""),c("","","","","","","","",""),c("","","","","","","","","")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-1.5, 1.0))
 ```
 
 ### Predictors of absolute infarct growth (D1 - D2)
@@ -281,7 +283,7 @@ stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single
 ```
 
 ### Predictors of absolute infarct growth (D1 - D5)
-```{r, echo= FALSE, fig.width=3.54, fig.height=2.36, fig.align='center',dpi=300, warning=F, results="asis"}
+```{r, echo= FALSE, fig.width=10, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
 model_A <- lmrob(infarct_growth_D5FLAIR~HIR1 + circulation, data=allpts, setting="KS2014")
@@ -303,7 +305,9 @@ dev.off()
 
 stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)", "Recanalization (partial)*Reperfusion", "Recanalization (full)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of total infarct growth",dep.var.labels.include = FALSE, model.numbers = FALSE)
 
-plotreg(file="IG_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3)
+plotreg(file="IG_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.4, 0.4))
+
+plotreg(file="IG_models_nolabels.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("","","","","","","","",""),c("","","","","","","","",""),c("","","","","","","","","")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.5, 0.4))
 ```
 
 ### Predictors of collateral flow defined by Higashida score
