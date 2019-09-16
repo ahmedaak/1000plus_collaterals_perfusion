@@ -1,6 +1,6 @@
 ---
 title: "1000plus collateral flow & perfusion project"
-author: "Ahmed Khalil"
+author: "Ahmed Khalil, MD PhD"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document: 
@@ -30,22 +30,21 @@ library(reshape2)
 library(texreg)
 library(ggstance)
 
-# DEFINE WHETHER YOU WANT EFFECTS PLOTS FOR MIXED MODELS
+# DEFINE WHETHER YOU WANT EFFECTS PLOTS FOR MODELS
 effplot = "Y"
 
 # Define whether (T) or not (F) to show outliers in boxplots
 OL = F
 
-#if (file.exists("allpts.Rdata")){
-  #("allpts.Rdata")
-#} else {
 # load data
-allpts <- read.table("all_data_v3.csv", header = T, sep=";")
+allpts <- read.table("all_data_v4.csv", header = T, sep=";")
 colnames(allpts)[1] <- "ID"
 
 # load volumetric data
-auto_pts <- read.table("ALLVOLS_automated_AK_20180605.csv", header=T, sep=";") # patients automatically delineated
-manual_pts <- read.table("ALLVOLS_manual_AK_20180605.csv", header=T, sep=";") # patients manually delineated
+# patients automatically delineated
+auto_pts <- read.table("ALLVOLS_automated_AK_20180605.csv", header=T, sep=";") 
+# patients manually delineated
+manual_pts <- read.table("ALLVOLS_manual_AK_20180605.csv", header=T, sep=";") 
 
 # remove # of voxels, keep only volumes (in mm3)
 auto_pts <- auto_pts[,c(1,3,5,7,9,11,13)]
@@ -58,7 +57,7 @@ manual_pts[,-1] <- manual_pts[,-1]*0.001
 # combine manual and automated volumes
 vols_all_pts <- rbind(auto_pts, manual_pts)
 
-# exclude subject 86 (not in Kersten's main dataset)
+# exclude subject 86 (not in main dataset)
 vols_all_pts <- vols_all_pts[!vols_all_pts$ID=="86",]
 
 # calculate HIR for days 1 and 2 
@@ -75,6 +74,7 @@ allpts$Tmax_D2_.6_volume <- allpts$Tmax_vol_d2
 # create reperfusion variables
 allpts$Tmax_6_reperf_abs <- allpts$Tmax_D1_.6_volume - allpts$Tmax_D2_.6_volume
 allpts$Tmax_6_reperf_rel <- (allpts$Tmax_6_reperf_abs/allpts$Tmax_D1_.6_volume)*100
+
 # replace infinity values (divide by zero where D1 Tmax volume = 0) with NA
 is.na(allpts$Tmax_6_reperf_rel)<-sapply(allpts$Tmax_6_reperf_rel, is.infinite)
 
@@ -105,7 +105,7 @@ allpts$higashida_D1 <- factor(allpts$higashida_D1)
 allpts$higashida_D2 <- factor(allpts$higashida_D2)
 allpts$higashida_change <- factor(allpts$higashida_change)
 
-# remove certain variables
+# remove unneeded variables
 allpts$no_recan_1 <- c()
 allpts$VAR00002 <- c()
 allpts$TSI_dich <- c()
@@ -117,10 +117,11 @@ allpts <- merge(allpts, occ_classfn, by = "ID")
 # correctly code NaNs
 allpts[allpts=="NaN"]<-NA
 
+# reorder vessel occlusions
+allpts$vessel = factor(allpts$vessel,levels(allpts$vessel)[c(4,5,6,7,8,1,2,14,3,9,10,11,12,13)])
+
 # save data 
 save(allpts, file = "allpts.Rdata")
-
-#}
 
 
 ```
@@ -170,20 +171,23 @@ Citation of package:
 # descriptive stats
 kable(summarize(allpts, type="numeric"))
 
-summarize(allpts, type="factor", variables=c("higashida_D1", "higashida_D2", "Rekan", "circulation", "sex", "iv_tPR"))
+summarize(allpts, type="factor", variables=c("higashida_D1", "higashida_D2", "Rekan", "circulation", "sex", "iv_tPR", "vessel"))
+
+# plot vessel occlusion locations 
+barplot(table(allpts$vessel), xlab = "Occluded vessel", ylab = "Frequency", cex.names = 0.62, col = c("#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77"),ylim=c(0,40))
 
 # visualize changes in Higashida over time
-# create Higashida data frame
-higa_mat <- cbind(allpts$higashida_D1, allpts$higashida_D2)
-# sort Higashida data frame based on D1
-higa_mat_sort <- higa_mat[order(higa_mat[,1]),]
-# make Higashida data frame long
-higa_long <- melt(higa_mat_sort)
-# give meaningful names to columns
-colnames(higa_long) <- c("Subject","Day","Higashida")
-higa_long$Higashida <- factor(higa_long$Higashida)
-# plot as heat map (i.e. Lasagne plot)
-ggplot(higa_long, aes(x=Day, y=Subject, fill=Higashida)) + geom_tile(colour="black") + scale_x_discrete(limits=c(1,2)) + scale_fill_manual(values=c("#d7191c", "#fdae61", "#ffffbf", "#abd9e9", "#2c7bb6", "#000000"),name="Higashida score", labels = c("0","1","2","3","4","NA")) 
+  # create Higashida data frame
+  higa_mat <- cbind(allpts$higashida_D1, allpts$higashida_D2)
+  # sort Higashida data frame based on D1
+  higa_mat_sort <- higa_mat[order(higa_mat[,1]),]
+  # make Higashida data frame long
+  higa_long <- melt(higa_mat_sort)
+  # give meaningful names to columns
+  colnames(higa_long) <- c("Subject","Day","Higashida")
+  higa_long$Higashida <- factor(higa_long$Higashida)
+  # plot as heat map (i.e. Lasagne plot)
+  ggplot(higa_long, aes(x=Day, y=Subject, fill=Higashida)) + geom_tile(colour="black") + scale_x_discrete(limits=c(1,2)) + scale_fill_manual(values=c("#d7191c", "#fdae61", "#ffffbf", "#abd9e9", "#2c7bb6", "#000000"),name="Higashida score", labels = c("0","1","2","3","4","NA")) 
                     
 ```
 *Plot showing the change in Higashida scores over time for each patient.*
@@ -246,7 +250,7 @@ dev.off()
 
 stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)", "Recanalization (partial)*Reperfusion", "Recanalization (full)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of long-term clinical outcome (mRS day 90)",dep.var.labels.include = FALSE, model.numbers = FALSE)
 
-plotreg(file="mRS_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3)
+plotreg(file="mRS_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim=c(-1.5, 0.8))
 
 plotreg(file="mRS_models_nolabels.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("","","","","","","","",""),c("","","","","","","","",""),c("","","","","","","","","")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-1.5, 1.0))
 ```
@@ -305,9 +309,9 @@ dev.off()
 
 stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)", "Recanalization (partial)*Reperfusion", "Recanalization (full)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of total infarct growth",dep.var.labels.include = FALSE, model.numbers = FALSE)
 
-plotreg(file="IG_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.4, 0.4))
+plotreg(file="IG_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.5, 0.5))
 
-plotreg(file="IG_models_nolabels.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("","","","","","","","",""),c("","","","","","","","",""),c("","","","","","","","","")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.5, 0.4))
+plotreg(file="IG_models_nolabels.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("","","","","","","","",""),c("","","","","","","","",""),c("","","","","","","","","")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.5, 0.5))
 ```
 
 ### Predictors of collateral flow defined by Higashida score
