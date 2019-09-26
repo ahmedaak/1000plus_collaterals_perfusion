@@ -37,7 +37,7 @@ effplot = "Y"
 OL = F
 
 # load data
-allpts <- read.table("all_data_v4.csv", header = T, sep=";")
+allpts <- read.table("all_data_v5.csv", header = T, sep=";")
 colnames(allpts)[1] <- "ID"
 
 # load volumetric data
@@ -78,12 +78,6 @@ allpts$Tmax_6_reperf_rel <- (allpts$Tmax_6_reperf_abs/allpts$Tmax_D1_.6_volume)*
 # replace infinity values (divide by zero where D1 Tmax volume = 0) with NA
 is.na(allpts$Tmax_6_reperf_rel)<-sapply(allpts$Tmax_6_reperf_rel, is.infinite)
 
-# recode recanalization variable
-allpts$Rekan[allpts$Rekan==0] <- "None" # no recanalization
-allpts$Rekan[allpts$Rekan==1] <- "Full" # full recanalization
-allpts$Rekan[allpts$Rekan==2] <- "Partial" # partial recanalization
-allpts$Rekan <- factor(allpts$Rekan)
-allpts$Rekan <- factor(allpts$Rekan,levels(allpts$Rekan)[c(2,3,1)])
 
 # recode other categorical variables
 allpts$sex[allpts$sex==1] <- "Male"
@@ -117,8 +111,19 @@ allpts <- merge(allpts, occ_classfn, by = "ID")
 # correctly code NaNs
 allpts[allpts=="NaN"]<-NA
 
+# remove patients without TIMI score (because they had no occlusions)
+allpts <- allpts[!is.na(allpts$TIMI),]
+
+# recode recanalization variable based on TIMI score
+allpts$Rekan <- allpts$TIMI
+allpts$Rekan[allpts$Rekan==0 | allpts$Rekan==1] <- "No" # no recanalization
+allpts$Rekan[allpts$Rekan==2 | allpts$Rekan==3] <- "Yes" # full recanalization
+allpts$Rekan <- factor(allpts$Rekan)
+
+allpts$TIMI <- factor(allpts$TIMI)
+
 # reorder vessel occlusions
-allpts$vessel = factor(allpts$vessel,levels(allpts$vessel)[c(4,5,6,7,8,1,2,14,3,9,10,11,12,13)])
+allpts$vessel = factor(allpts$vessel,levels(allpts$vessel)[c(4,5,6,7,8,9,1,2,15,3,10,11,12,13,14)])
 
 # save data 
 save(allpts, file = "allpts.Rdata")
@@ -158,23 +163,30 @@ Citation of package:
   
 ### Summary of main results  
 * Higashida score and recanalization are independent predictors of reperfusion. See [Predictors of extent of reperfusion]
-* Collateral flow (HIR or Higashida score) does not predict reperfusion in full recanalizers. See [Predictors of extent of reperfusion in full recanalizers]
-* Collateral flow (HIR or Higashida score) does not predict reperfusion in non-recanalizers. See [Predictors of extent of reperfusion in non-recanalizers]
-* Higashida score independently predicts reperfusion in partial recanalizers. See [Predictors of extent of reperfusion in partial recanalizers]
 * NIHSS on admission and recanalization independently predict 90 day mRS. Collateral flow and reperfusion do not. See [Predictors of clinical outcome]
 * Collateral flow (both Higashida and HIR), NIHSS on admission, and reperfusion in partial recanalizers independently predict early infarct growth (D1 - D2). See [Predictors of absolute infarct growth (D1 - D2)]
 * Collateral flow (both Higashida and HIR), NIHSS on admission, and reperfusion in partial recanalizers independently predict late infarct growth (D1 - D5). See [Predictors of absolute infarct growth (D1 - D5)]
 
 
 ### Descriptive statistics
-```{r, echo= FALSE, fig.width=6, fig.height10, fig.align='center',dpi=300, warning=F}
+```{r, echo= FALSE, fig.width=6, fig.align='center',dpi=300, warning=F, results="asis"}
 # descriptive stats
-kable(summarize(allpts, type="numeric"))
+#stargazer(summarize(allpts, type="numeric"), type="html", align = F, style="all", single.row=T)
+# create new data frame for descriptive stats
+allpts_desc <- allpts[,c(2:7,10:12,15,17,24:26,35:38)]
+# need to change colnames to remove underscores or stargazer doesn't work
+colnames(allpts_desc) <- c("Age","Sex","iv.tPA","TSI","NIHSS.a","NIHSS.d","mRS.90","DWI.d1","DWI.d2","circ","TIMI","FLAIR.d5","hig.d1","hig.d2","HIR.d1","HIR.d2","Tmax.d1","Tmax.d2")
+covar_labels <- c("Age","Time onset-to-imaging", "NIHSS admission", "NIHSS discharge", "mRS day 90", "DWI volume day 1", "DWI volume day 2", "FLAIR volume day 5", "HIR day 1", "HIR day 2", "Tmax >6s volume day 1", "Tmax >6s volume day 2")
+stargazer(allpts_desc[,c(1,4,5,6,7,8,9,12,15,16,17,18)], type="html", covariate.labels = covar_labels, median = T, min.max = F, digits = 1)
+```
 
-summarize(allpts, type="factor", variables=c("higashida_D1", "higashida_D2", "Rekan", "circulation", "sex", "iv_tPR", "vessel"))
+```{r, echo= FALSE, fig.width=6, fig.align='center',dpi=300, warning=F}
+summarize(allpts_desc, type="factor", variables=c("hig.d1", "hig.d2", "TIMI", "circ", "Sex", "iv.tPA"))
+```
 
+```{r, echo= FALSE, fig.width=6, fig.align='center',dpi=300, warning=F, results="asis"}
 # plot vessel occlusion locations 
-barplot(table(allpts$vessel), xlab = "Occluded vessel", ylab = "Frequency", cex.names = 0.62, col = c("#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77"),ylim=c(0,40))
+barplot(table(allpts$vessel), xlab = "Occluded vessel", ylab = "Frequency", cex.names = 0.58, col = c("#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#d95f02","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77","#1b9e77"),ylim=c(0,40))
 
 # visualize changes in Higashida over time
   # create Higashida data frame
@@ -208,22 +220,19 @@ table, td, th {
 
 ### Predictors of extent of reperfusion 
 ```{r, echo= FALSE, fig.width=3.54, fig.height=2.36, fig.align='center',dpi=300, warning=F, results="asis"}
-model_A <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + circulation, data=allpts, setting = "KS2014")
-model_B <- lmrob(Tmax_6_reperf_rel~NIHSS_ad + iv_tPR + Rekan + circulation, data=allpts, setting = "KS2014")
-model_C <- lmrob(scale(Tmax_6_reperf_rel)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(HIR1) + circulation, data=allpts, setting = "KS2014")
-model_D <- lmrob(scale(Tmax_6_reperf_rel)~scale(NIHSS_ad) + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
+model_A <- lmrob(scale(Tmax_6_reperf_rel)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(HIR1) + circulation, data=allpts, setting = "KS2014")
+model_B <- lmrob(scale(Tmax_6_reperf_rel)~scale(NIHSS_ad) + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
 
 pdf("reperf_RekanHIR.pdf", width = 5, height = 5)
-plot(effect(mod = model_C, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+plot(effect(mod = model_A, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
 dev.off()
 pdf("reperf_RekanHig.pdf", width = 5, height = 5)
-plot(effect(mod = model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
+plot(effect(mod = model_B, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
 dev.off()
 
-stargazer(model_C, model_D, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)"),column.labels = c("HIR", "Higashida"), dep.var.caption = "", title="Predictors of extent of reperfusion",dep.var.labels.include = FALSE, model.numbers = FALSE)
+stargazer(model_A, model_B, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV thrombolysis", "Recanalization", "HIR", "Higashida (poor)", "Circulation (posterior)", "Recanalization*HIR", "Recanalization*Higashida (poor)"),column.labels = c("HIR", "Higashida"), dep.var.caption = "", title="Predictors of extent of reperfusion",dep.var.labels.include = FALSE, model.numbers = FALSE)
 
-
-plotreg(file="reperf_models.pdf",mfrow=FALSE,list(model_C,model_D), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS")),custom.model.names = c("",""), ylab.cex = 1.3)
+plotreg(file="reperf_models.pdf",mfrow=FALSE,list(model_A,model_B), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Recanalization", "HIR", "Posterior circulation", "Recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Recanalization", "Poor Higashida score", "Posterior circulation", "Recanalization * Poor HS")),custom.model.names = c("",""), ylab.cex = 1.3)
 
 ```
 
@@ -231,105 +240,65 @@ plotreg(file="reperf_models.pdf",mfrow=FALSE,list(model_C,model_D), custom.coef.
 ```{r, echo= FALSE, fig.width=10, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
-model_A <- lmrob(mRS_d90~HIR1, data=allpts, setting = "KS2014")
-model_B <- lmrob(scale(mRS_d90)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(HIR1) + circulation, data=allpts, setting = "KS2014")
-model_C <- lmrob(mRS_d90~higashida_D1_bin, data=allpts, setting = "KS2014")
+model_C <- lmrob(scale(mRS_d90)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(HIR1) + circulation, data=allpts, setting = "KS2014")
 model_D <- lmrob(scale(mRS_d90)~scale(NIHSS_ad) + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
-model_E <- lmrob(mRS_d90~Tmax_6_reperf_rel, data=allpts, setting = "KS2014")
-model_F <- lmrob(scale(mRS_d90)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(Tmax_6_reperf_rel) + circulation, data=allpts, setting = "KS2014")
+model_E <- lmrob(scale(mRS_d90)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(Tmax_6_reperf_rel) + circulation, data=allpts, setting = "KS2014")
 
 pdf("mRS_RekanHIR.pdf", width = 5, height = 5)
-plot(effect(mod=model_B, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+plot(effect(mod=model_C, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
 dev.off()
 pdf("mRS_RekanHig.pdf", width = 5, height = 5)
 plot(effect(mod=model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
 dev.off()
 pdf("mRS_RekanReperf.pdf", width = 5, height = 5)
-plot(effect(mod=model_F, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
+plot(effect(mod=model_E, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
 dev.off()
 
-stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)", "Recanalization (partial)*Reperfusion", "Recanalization (full)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of long-term clinical outcome (mRS day 90)",dep.var.labels.include = FALSE, model.numbers = FALSE)
+stargazer(model_C, model_D, model_E, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (yes)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (yes)*HIR", "Recanalization (yes)*Higashida (poor)", "Recanalization (yes)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of long-term clinical outcome (mRS day 90)",dep.var.labels.include = FALSE, model.numbers = FALSE)
 
-plotreg(file="mRS_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim=c(-1.5, 0.8))
-
-plotreg(file="mRS_models_nolabels.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("","","","","","","","",""),c("","","","","","","","",""),c("","","","","","","","","")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-1.5, 1.0))
+plotreg(file="mRS_models.pdf",mfrow=FALSE,list(model_C,model_D,model_E), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis","Recanalization (yes)", "HIR", "Posterior circulation",  "Recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Recanalization (yes)", "Poor Higashida score", "Posterior circulation", "Recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Recanalization (yes)", "Reperfusion", "Posterior circulation", "Recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim=c(-1.5, 0.8))
 ```
 
 ### Predictors of absolute infarct growth (D1 - D2)
 ```{r, echo= FALSE, fig.width=3, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
-model_A <- lmrob(DWIgrowth~HIR1 + circulation, data=allpts, setting = "KS2014")
-model_B <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*HIR1 + circulation, data=allpts, setting = "KS2014")
-model_C <- lmrob(DWIgrowth~higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
-model_D <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
-model_E <- lmrob(DWIgrowth~Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
-model_F <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR +Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
+model_F <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*HIR1 + circulation, data=allpts, setting = "KS2014")
+model_G <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR + Rekan*higashida_D1_bin + circulation, data=allpts, setting = "KS2014")
+model_H <- lmrob(DWIgrowth~NIHSS_ad + iv_tPR +Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
 
 pdf("DWIg_RekanHIR.pdf", width = 5, height = 5)
-plot(effect(mod=model_B, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+plot(effect(mod=model_F, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
 dev.off()
 pdf("DWIg_RekanHig.pdf", width = 5, height = 5)
-plot(effect(mod=model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
+plot(effect(mod=model_G, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
 dev.off()
 pdf("DWIg_RekanReperf.pdf", width = 5, height = 5)
-plot(effect(mod=model_F, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
+plot(effect(mod=model_H, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
 dev.off()
 
-stargazer(model_A, model_B, model_C, model_D, model_E, model_F, type="html", align = F, style="all", single.row=T)
-stargazer(anova(model_A,model_B), type="html", align = F, style="all", single.row=T, title = "1 vs 2")
-stargazer(anova(model_C,model_D), type="html", align = F, style="all", single.row=T, title = "1 vs 3")
-stargazer(anova(model_E,model_F), type="html", align = F, style="all", single.row=T, title = "1 vs 4")
-
-stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)", "Recanalization (partial)*Reperfusion", "Recanalization (full)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of early infarct growth",dep.var.labels.include = FALSE, model.numbers = FALSE)
-
-
+stargazer(model_F, model_G, model_H, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (yes)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization*HIR", "Recanalization*Higashida (poor)", "Recanalization*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of early infarct growth",dep.var.labels.include = FALSE, model.numbers = FALSE)
 ```
 
 ### Predictors of absolute infarct growth (D1 - D5)
 ```{r, echo= FALSE, fig.width=10, fig.height=10, fig.align='center',dpi=300, warning=F, results="asis"}
 par(mfrow=c(3,2))
 
-model_A <- lmrob(infarct_growth_D5FLAIR~HIR1 + circulation, data=allpts, setting="KS2014")
-model_B <- lmrob(scale(infarct_growth_D5FLAIR)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(HIR1) + circulation, data=allpts, setting="KS2014")
-model_C <- lmrob(infarct_growth_D5FLAIR~higashida_D1_bin + circulation, data=allpts, setting="KS2014")
-model_D <- lmrob(scale(infarct_growth_D5FLAIR)~scale(NIHSS_ad) + iv_tPR + Rekan*higashida_D1_bin  + circulation, data=allpts, setting="KS2014")
-model_E <- lmrob(infarct_growth_D5FLAIR~Rekan*Tmax_6_reperf_rel + circulation, data=allpts, setting = "KS2014")
-model_F <- lmrob(scale(infarct_growth_D5FLAIR)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(Tmax_6_reperf_rel) + circulation, data=allpts, setting = "KS2014")
+model_I <- lmrob(scale(infarct_growth_D5FLAIR)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(HIR1) + circulation, data=allpts, setting="KS2014")
+model_J <- lmrob(scale(infarct_growth_D5FLAIR)~scale(NIHSS_ad) + iv_tPR + Rekan*higashida_D1_bin  + circulation, data=allpts, setting="KS2014")
+model_K <- lmrob(scale(infarct_growth_D5FLAIR)~scale(NIHSS_ad) + iv_tPR + Rekan*scale(Tmax_6_reperf_rel) + circulation, data=allpts, setting = "KS2014")
 
 pdf("FLAIRg_RekanHIR.pdf", width = 5, height = 5)
-plot(effect(mod=model_B, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
+plot(effect(mod=model_I, term = "Rekan*HIR1"), multiline=T, ci.style="bars")
 dev.off()
 pdf("FLAIRg_RekanHig.pdf", width = 5, height = 5)
-plot(effect(mod=model_D, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
+plot(effect(mod=model_J, term = "Rekan*higashida_D1_bin"), multiline=T, ci.style="bars")
 dev.off()
 pdf("FLAIRg_RekanReperf.pdf", width = 5, height = 5)
-plot(effect(mod=model_F, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
+plot(effect(mod=model_K, term = "Rekan*Tmax_6_reperf_rel"), multiline=T, ci.style="bars")
 dev.off()
 
-stargazer(model_B, model_D, model_F, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (partial)","Recanalization (full)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)", "Recanalization (partial)*HIR", "Recanalization (full)*HIR", "Recanalization (partial)*Higashida (poor)", "Recanalization (full)*Higashida (poor)", "Recanalization (partial)*Reperfusion", "Recanalization (full)*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of total infarct growth",dep.var.labels.include = FALSE, model.numbers = FALSE)
+stargazer(model_I, model_J, model_K, type="html", align = F, style="all", single.row=T, covariate.labels = c("NIHSS on admission", "IV tPA (yes)", "Recanalization (yes)", "HIR", "Higashida (poor)", "Reperfusion", "Circulation (posterior)",  "Recanalization*HIR", "Recanalization*Higashida (poor)", "Recanalization*Reperfusion"),column.labels = c("HIR", "Higashida", "Reperfusion"), dep.var.caption = "", title="Predictors of total infarct growth",dep.var.labels.include = FALSE, model.numbers = FALSE)
 
-plotreg(file="IG_models.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "HIR", "Posterior circulation", "Partial recanalization * HIR", "Full recanalization * HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Poor Higashida score", "Posterior circulation", "Partial recanalization * Poor HS", "Full recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Partial recanalization", "Full recanalization", "Reperfusion", "Posterior circulation", "Partial recanalization * Reperfusion", "Full recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.5, 0.5))
-
-plotreg(file="IG_models_nolabels.pdf",mfrow=FALSE,list(model_B,model_D,model_F), custom.coef.names = list(c("","","","","","","","",""),c("","","","","","","","",""),c("","","","","","","","","")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.5, 0.5))
-```
-
-### Predictors of collateral flow defined by Higashida score
-```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
-model_A <- glmrob(higashida_D1_bin~NIHSS_ad + age + sex + TSI + DWIvol_d1 + circulation, data=allpts, family = "binomial")
-
-stargazer(model_A, type="html", align = F, style="all", single.row=T)
-```
-
-### Predictors of collateral flow defined by HIR
-```{r, echo= FALSE, fig.width=8, fig.height=5, fig.align='center',dpi=300, warning=F, results="asis"}
-model_A <- glmrob(HIR1~NIHSS_ad + age + sex + TSI + DWIvol_d1 + circulation, data=allpts, family = "binomial")
-
-
-if (effplot == "Y") {
-plot(allEffects(model_A), multiline=T, ci.style="bars")
-
-}
-
-stargazer(model_A, type="html", align = F, style="all", single.row=T)
+plotreg(file="IG_models.pdf",mfrow=FALSE,list(model_I,model_J,model_K), custom.coef.names = list(c("Intercept","NIHSS on admission", "IV thrombolysis", "Recanalization (yes)", "HIR", "Posterior circulation", "Recanalization*HIR"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Recanalization (yes)", "Poor Higashida score", "Posterior circulation", "Recanalization * Poor HS"),c("Intercept","NIHSS on admission", "IV thrombolysis", "Recanalization (yes)", "Reperfusion", "Posterior circulation", "Recanalization * Reperfusion")),custom.model.names = c("","",""), ylab.cex = 1.3, xlim = c(-0.5, 0.5))
 ```
